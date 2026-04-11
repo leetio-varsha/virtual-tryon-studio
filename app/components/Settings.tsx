@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { TryOnSettings, AiModel } from "@/lib/db/schema";
 
 interface SettingsProps {
@@ -10,9 +10,28 @@ interface SettingsProps {
 
 export default function Settings({ settings, onChange }: SettingsProps) {
   const [open, setOpen] = useState(false);
+  const [uploadingFace, setUploadingFace] = useState(false);
+  const faceInputRef = useRef<HTMLInputElement>(null);
 
   const update = (partial: Partial<TryOnSettings>) => {
     onChange({ ...settings, ...partial });
+  };
+
+  const uploadFace = async (file: File) => {
+    setUploadingFace(true);
+    try {
+      const formData = new FormData();
+      formData.append("files", file);
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const data = await res.json();
+      if (data.paths?.[0]) {
+        update({ faceImagePath: data.paths[0] });
+      }
+    } catch (e) {
+      console.error("Face upload failed:", e);
+    } finally {
+      setUploadingFace(false);
+    }
   };
 
   return (
@@ -97,6 +116,76 @@ export default function Settings({ settings, onChange }: SettingsProps) {
             Опишите как должно выглядеть итоговое фото: стиль, освещение, настроение, качество.
             Работает вместе с фоном. Оставьте пустым — фото останется как есть.
           </p>
+        </div>
+
+        {/* Face swap — always visible (critical for quality) */}
+        <div className="rounded-lg border border-border bg-background p-3">
+          <div className="flex items-start gap-3">
+            <input
+              type="checkbox"
+              checked={settings.faceSwap}
+              onChange={(e) => update({ faceSwap: e.target.checked })}
+              className="mt-0.5 accent-accent"
+              id="face-swap-toggle"
+            />
+            <label htmlFor="face-swap-toggle" className="flex-1 text-sm cursor-pointer">
+              <span className="font-medium">Замена лица</span>
+              <p className="text-xs text-muted mt-0.5">
+                Подменит лицо модели на твоё референсное фото. Держит лицо одинаковым
+                во всех генерациях — иначе AI каждый раз рисует разные лица.
+              </p>
+            </label>
+          </div>
+
+          {settings.faceSwap && (
+            <div className="mt-3 flex items-center gap-3">
+              {settings.faceImagePath ? (
+                <>
+                  <img
+                    src={settings.faceImagePath}
+                    alt="Face reference"
+                    className="w-16 h-16 rounded-lg object-cover border border-border"
+                  />
+                  <div className="flex-1">
+                    <p className="text-xs text-muted mb-1">Референсное фото лица загружено</p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => faceInputRef.current?.click()}
+                        className="text-xs px-3 py-1.5 bg-surface border border-border rounded-lg hover:border-accent transition-colors"
+                      >
+                        Заменить
+                      </button>
+                      <button
+                        onClick={() => update({ faceImagePath: null })}
+                        className="text-xs px-3 py-1.5 bg-surface border border-border rounded-lg hover:border-red-500 transition-colors"
+                      >
+                        Удалить
+                      </button>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <button
+                  onClick={() => faceInputRef.current?.click()}
+                  disabled={uploadingFace}
+                  className="w-full py-3 border-2 border-dashed border-border rounded-lg text-sm text-muted hover:border-accent hover:text-foreground transition-colors disabled:opacity-50"
+                >
+                  {uploadingFace ? "Загрузка..." : "Загрузить фото лица (чёткое, анфас)"}
+                </button>
+              )}
+              <input
+                ref={faceInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) uploadFace(file);
+                  e.target.value = "";
+                }}
+              />
+            </div>
+          )}
         </div>
 
         {/* Aspect ratio — always visible */}

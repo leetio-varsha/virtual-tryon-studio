@@ -37,4 +37,6 @@ export interface TryOnSettings {
   finalPrompt: string;
   aspectRatio: "4:5" | "1:1" | "9:16";
   hdUpscale: boolean;
+  faceSwap: boolean;
+  faceImagePath: string | null;
 }

@@ -106,6 +106,30 @@ async function runLeffa(input: TryOnInput): Promise<string> {
   return (result as any).image.url;
 }
 
+// --- Face swap (Half-Moon AI via fal.ai) ---
+
+export async function swapFace(
+  sourceFaceImage: string,
+  targetImage: string,
+): Promise<string> {
+  console.log("[FaceSwap] Running Half-Moon AI face swap...");
+  const result = await runWithRetry(() =>
+    fal.subscribe("half-moon-ai/ai-face-swap/faceswapimage", {
+      input: {
+        source_face_url: sourceFaceImage,
+        target_image_url: targetImage,
+      },
+    })
+  );
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const url = (result as any)?.image?.url ?? (result as any)?.data?.image?.url;
+  if (!url) {
+    throw new Error("Face swap returned no image URL");
+  }
+  console.log("[FaceSwap] Done");
+  return url;
+}
+
 // --- Router ---
 
 export async function runTryOn(model: AiModel, input: TryOnInput): Promise<string> {

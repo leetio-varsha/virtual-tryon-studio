@@ -18,6 +18,8 @@ const DEFAULT_SETTINGS: TryOnSettings = {
   finalPrompt: "",
   aspectRatio: "4:5",
   hdUpscale: true,
+  faceSwap: false,
+  faceImagePath: null,
 };
 
 export default function Home() {
