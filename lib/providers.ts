@@ -92,7 +92,13 @@ async function runFashn(input: TryOnInput): Promise<string> {
     })
   );
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (result as any).image.url;
+  const r = result as any;
+  const url = r?.data?.image?.url ?? r?.image?.url ?? r?.data?.images?.[0]?.url ?? r?.images?.[0]?.url;
+  if (!url) {
+    console.error("[FASHN] Unexpected response:", JSON.stringify(r).slice(0, 500));
+    throw new Error("FASHN returned no image URL");
+  }
+  return url;
 }
 
 // --- Leffa (fal.ai) ---
@@ -112,7 +118,52 @@ async function runLeffa(input: TryOnInput): Promise<string> {
     })
   );
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (result as any).image.url;
+  const r = result as any;
+  const url = r?.data?.image?.url ?? r?.image?.url ?? r?.data?.images?.[0]?.url ?? r?.images?.[0]?.url;
+  if (!url) {
+    console.error("[Leffa] Unexpected response:", JSON.stringify(r).slice(0, 500));
+    throw new Error("Leffa returned no image URL");
+  }
+  return url;
+}
+
+// --- FLUX.2 Pro Edit (fal.ai) — Full photoshoot pipeline ---
+
+export interface PhotoshootInput {
+  modelImage: string;      // data URI of the model/person
+  garmentImage: string;     // data URI of the garment
+  scenePrompt: string;      // scene description
+  finalPrompt: string;      // style/quality prompt
+  aspectRatio: string;      // "4:5", "1:1", "9:16"
+  seed?: number | null;
+}
+
+export async function runPhotoshoot(input: PhotoshootInput): Promise<string> {
+  const scene = input.scenePrompt || "clean studio background";
+  const style = input.finalPrompt || "professional fashion photography, sharp details, 4K";
+  const prompt = `The person from @image1 wearing the outfit from @image2, ${scene}, ${style}`;
+
+  console.log(`[Photoshoot] FLUX.2 Pro Edit — prompt: "${prompt.slice(0, 120)}..."`);
+
+  const result = await runWithRetry(() =>
+    fal.subscribe("fal-ai/flux-2-pro/edit", {
+      input: {
+        image_urls: [input.modelImage, input.garmentImage],
+        prompt,
+        ...(input.seed != null ? { seed: input.seed } : {}),
+      },
+    })
+  );
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const r = result as any;
+  const url = r?.data?.images?.[0]?.url ?? r?.images?.[0]?.url ?? r?.data?.image?.url ?? r?.image?.url;
+  if (!url) {
+    console.error("[Photoshoot] Unexpected response:", JSON.stringify(r).slice(0, 500));
+    throw new Error("FLUX.2 Pro Edit returned no image URL");
+  }
+  console.log("[Photoshoot] Done");
+  return url;
 }
 
 // --- Face swap (Half-Moon AI via fal.ai) ---

@@ -36,7 +36,8 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [templatesOpen, setTemplatesOpen] = useState(false);
 
-  const isFullOutfit = settings.category === "full_outfit";
+  const isPhotoshoot = settings.aiModel === "flux-photoshoot";
+  const isFullOutfit = !isPhotoshoot && settings.category === "full_outfit";
   const canGenerate =
     modelImages.length > 0 &&
     garmentImages.length > 0 &&

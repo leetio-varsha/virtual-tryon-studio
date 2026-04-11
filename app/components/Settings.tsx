@@ -43,9 +43,10 @@ export default function Settings({ settings, onChange }: SettingsProps) {
           <label className="block text-xs text-muted mb-1.5 uppercase tracking-wider">
             AI Модель
           </label>
-          <div className="flex gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {([
-              { value: "fashn-v1.6" as AiModel, label: "FASHN v1.6", desc: "Лучшие детали" },
+              { value: "flux-photoshoot" as AiModel, label: "Фотошут", desc: "FLUX.2 — лучшее качество" },
+              { value: "fashn-v1.6" as AiModel, label: "FASHN v1.6", desc: "Точные детали" },
               { value: "leffa" as AiModel, label: "Leffa", desc: "CVPR 2025" },
               { value: "idm-vton" as AiModel, label: "IDM-VTON", desc: "Базовая" },
             ]).map((opt) => (
@@ -53,7 +54,7 @@ export default function Settings({ settings, onChange }: SettingsProps) {
                 key={opt.value}
                 onClick={() => update({ aiModel: opt.value })}
                 className={`
-                  flex-1 py-2 rounded-lg text-sm font-medium transition-colors border
+                  py-2 rounded-lg text-sm font-medium transition-colors border
                   ${settings.aiModel === opt.value
                     ? "bg-accent text-white border-accent"
                     : "bg-background border-border hover:border-accent/50"}
@@ -65,23 +66,9 @@ export default function Settings({ settings, onChange }: SettingsProps) {
             ))}
           </div>
           <p className="text-xs text-muted mt-1">
-            FASHN — лучше передаёт логотипы и швы. Leffa — новейшая от Meta. IDM-VTON — быстрая и дешёвая.
-          </p>
-        </div>
-
-        <div>
-          <label className="block text-xs text-muted mb-1.5 uppercase tracking-wider">
-            Описание одежды
-          </label>
-          <input
-            type="text"
-            value={settings.prompt}
-            onChange={(e) => update({ prompt: e.target.value })}
-            placeholder="например: long sleeve high neck zip-up athletic top with SX logo"
-            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent"
-          />
-          <p className="text-xs text-muted mt-1">
-            Опишите одежду на английском — помогает AI точнее передать детали.
+            {settings.aiModel === "flux-photoshoot"
+              ? "FLUX.2 Pro — генерирует полный фотошут: модель + одежда + сцена в одном кадре. Как профессиональная съёмка."
+              : "FASHN — точные логотипы и швы. Leffa — Meta CVPR 2025. IDM-VTON — быстрая и дешёвая."}
           </p>
         </div>
 
@@ -97,7 +84,9 @@ export default function Settings({ settings, onChange }: SettingsProps) {
             className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent"
           />
           <p className="text-xs text-muted mt-1">
-            Опишите желаемый фон на английском. Оставьте пустым — фон останется оригинальный.
+            {settings.aiModel === "flux-photoshoot"
+              ? "Обязательно для Фотошута. Опишите где происходит съёмка: кафе в Париже, фитнес-зал, улица Дубая..."
+              : "Опишите желаемый фон на английском. Оставьте пустым — фон останется оригинальный."}
           </p>
         </div>
 
@@ -228,23 +217,25 @@ export default function Settings({ settings, onChange }: SettingsProps) {
 
       {open && (
         <div className="px-4 pb-4 space-y-4">
-          {/* Category */}
-          <div>
-            <label className="block text-xs text-muted mb-1.5 font-medium">Категория</label>
-            <select
-              value={settings.category}
-              onChange={(e) => update({ category: e.target.value as TryOnSettings["category"] })}
-              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent"
-            >
-              <option value="full_outfit">Полный костюм (верх + низ)</option>
-              <option value="upper_body">Только верх (футболки, блузки, куртки)</option>
-              <option value="lower_body">Только низ (юбки, брюки, шорты)</option>
-              <option value="dresses">Платья / комбинезоны</option>
-            </select>
-            <p className="text-xs text-muted mt-1">
-              «Полный костюм» — загрузите 2 фото одежды: 1-е = верх, 2-е = низ. AI оденет в два прохода.
-            </p>
-          </div>
+          {/* Category — not needed for flux-photoshoot */}
+          {settings.aiModel !== "flux-photoshoot" && (
+            <div>
+              <label className="block text-xs text-muted mb-1.5 font-medium">Категория</label>
+              <select
+                value={settings.category}
+                onChange={(e) => update({ category: e.target.value as TryOnSettings["category"] })}
+                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent"
+              >
+                <option value="full_outfit">Полный костюм (верх + низ)</option>
+                <option value="upper_body">Только верх (футболки, блузки, куртки)</option>
+                <option value="lower_body">Только низ (юбки, брюки, шорты)</option>
+                <option value="dresses">Платья / комбинезоны</option>
+              </select>
+              <p className="text-xs text-muted mt-1">
+                «Полный костюм» — загрузите 2 фото одежды: 1-е = верх, 2-е = низ. AI оденет в два прохода.
+              </p>
+            </div>
+          )}
 
           {/* ── FASHN-specific settings ── */}
           {settings.aiModel === "fashn-v1.6" && (
@@ -358,6 +349,22 @@ export default function Settings({ settings, onChange }: SettingsProps) {
           {/* ── IDM-VTON-specific settings ── */}
           {settings.aiModel === "idm-vton" && (
             <>
+              <div>
+                <label className="block text-xs text-muted mb-1.5 font-medium">Описание одежды</label>
+                <input
+                  type="text"
+                  value={settings.prompt}
+                  onChange={(e) => update({ prompt: e.target.value })}
+                  placeholder="например: long sleeve zip-up athletic top with SX logo"
+                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent"
+                />
+                <p className="text-xs text-muted mt-1">
+                  Текстовая подсказка для AI — опишите одежду на английском.
+                  IDM-VTON использует это описание чтобы лучше понять что за вещь на фото.
+                  Другие модели (FASHN, Leffa) работают только по фото и текст не читают.
+                </p>
+              </div>
+
               <div>
                 <label className="block text-xs text-muted mb-1.5 font-medium">
                   Шаги: {settings.steps}
