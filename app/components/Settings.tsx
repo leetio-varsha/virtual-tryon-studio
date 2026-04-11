@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { TryOnSettings } from "@/lib/db/schema";
+import type { TryOnSettings, AiModel } from "@/lib/db/schema";
 
 interface SettingsProps {
   settings: TryOnSettings;
@@ -17,8 +17,39 @@ export default function Settings({ settings, onChange }: SettingsProps) {
 
   return (
     <div className="rounded-xl bg-surface border border-border">
-      {/* Prompts — always visible */}
+      {/* AI Model + Prompts — always visible */}
       <div className="p-4 space-y-4">
+        {/* AI Model selector */}
+        <div>
+          <label className="block text-xs text-muted mb-1.5 uppercase tracking-wider">
+            AI Модель
+          </label>
+          <div className="flex gap-2">
+            {([
+              { value: "fashn-v1.6" as AiModel, label: "FASHN v1.6", desc: "Лучшие детали" },
+              { value: "leffa" as AiModel, label: "Leffa", desc: "CVPR 2025" },
+              { value: "idm-vton" as AiModel, label: "IDM-VTON", desc: "Базовая" },
+            ]).map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => update({ aiModel: opt.value })}
+                className={`
+                  flex-1 py-2 rounded-lg text-sm font-medium transition-colors border
+                  ${settings.aiModel === opt.value
+                    ? "bg-accent text-white border-accent"
+                    : "bg-background border-border hover:border-accent/50"}
+                `}
+              >
+                <div>{opt.label}</div>
+                <div className="text-xs opacity-70">{opt.desc}</div>
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-muted mt-1">
+            FASHN — лучше передаёт логотипы и швы. Leffa — новейшая от Meta. IDM-VTON — быстрая и дешёвая.
+          </p>
+        </div>
+
         <div>
           <label className="block text-xs text-muted mb-1.5 uppercase tracking-wider">
             Описание одежды

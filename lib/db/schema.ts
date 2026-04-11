@@ -24,7 +24,10 @@ export const generations = sqliteTable("generations", {
 export type Template = typeof templates.$inferSelect;
 export type Generation = typeof generations.$inferSelect;
 
+export type AiModel = "idm-vton" | "fashn-v1.6" | "leffa";
+
 export interface TryOnSettings {
+  aiModel: AiModel;
   category: "upper_body" | "lower_body" | "dresses" | "full_outfit";
   steps: number;
   seed: number | null;

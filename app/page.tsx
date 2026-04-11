@@ -8,6 +8,7 @@ import TemplateManager from "./components/TemplateManager";
 import type { TryOnSettings } from "@/lib/db/schema";
 
 const DEFAULT_SETTINGS: TryOnSettings = {
+  aiModel: "fashn-v1.6",
   category: "full_outfit",
   steps: 30,
   seed: null,
