@@ -106,6 +106,30 @@ async function runLeffa(input: TryOnInput): Promise<string> {
   return (result as any).image.url;
 }
 
+// --- Face swap (Half-Moon AI via fal.ai) ---
+
+export async function swapFace(
+  sourceFaceImage: string,
+  targetImage: string,
+): Promise<string> {
+  console.log("[FaceSwap] Running Half-Moon AI face swap...");
+  const result = await runWithRetry(() =>
+    fal.subscribe("half-moon-ai/ai-face-swap/faceswapimage", {
+      input: {
+        source_face_url: sourceFaceImage,
+        target_image_url: targetImage,
+      },
+    })
+  );
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const url = (result as any)?.image?.url ?? (result as any)?.data?.image?.url;
+  if (!url) {
+    throw new Error("Face swap returned no image URL");
+  }
+  console.log("[FaceSwap] Done");
+  return url;
+}
+
 // --- Router ---
 
 export async function runTryOn(model: AiModel, input: TryOnInput): Promise<string> {
@@ -159,6 +183,33 @@ export async function replaceBackground(
     })
   );
   console.log("[Pipeline] Background replaced");
+  return output as unknown as string;
+}
+
+export async function inpaintRegion(
+  imageDataUri: string,
+  maskDataUri: string,
+  prompt: string,
+): Promise<string> {
+  // Higher guidance + more steps than bg replacement — region edits need
+  // tighter prompt adherence and sharper detail (logos, seams, text).
+  const fullPrompt = [prompt, "high quality, sharp detail, preserve surrounding context"]
+    .filter(Boolean)
+    .join(", ");
+  console.log(`[Inpaint] Region: "${fullPrompt}"`);
+  const output = await runWithRetry(() =>
+    replicate.run(INPAINT_MODEL, {
+      input: {
+        image: imageDataUri,
+        mask: maskDataUri,
+        prompt: fullPrompt,
+        guidance_scale: 30,
+        num_inference_steps: 40,
+        output_format: "png",
+      },
+    })
+  );
+  console.log("[Inpaint] Region regenerated");
   return output as unknown as string;
 }
 

@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import InpaintEditor from "./InpaintEditor";
 
 interface ResultPanelProps {
   resultUrl: string | null;
   loading: boolean;
   history: string[];
   onHistorySelect: (url: string) => void;
+  onInpainted?: (url: string) => void;
 }
 
 export default function ResultPanel({
@@ -14,8 +16,10 @@ export default function ResultPanel({
   loading,
   history,
   onHistorySelect,
+  onInpainted,
 }: ResultPanelProps) {
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
 
   const downloadImage = async (url: string) => {
     const response = await fetch(url);
@@ -66,6 +70,13 @@ export default function ResultPanel({
               Скачать
             </button>
             <button
+              onClick={() => setEditorOpen(true)}
+              className="px-4 py-2 bg-surface border border-border rounded-lg text-sm hover:border-accent transition-colors"
+              title="Перерисовать отдельную область кистью"
+            >
+              Редактировать
+            </button>
+            <button
               onClick={() => setLightbox(resultUrl)}
               className="px-4 py-2 bg-surface border border-border rounded-lg text-sm hover:border-accent transition-colors"
             >
@@ -95,6 +106,16 @@ export default function ResultPanel({
           </div>
         )}
       </div>
+
+      {/* Inpaint editor */}
+      <InpaintEditor
+        open={editorOpen}
+        imageUrl={resultUrl}
+        onClose={() => setEditorOpen(false)}
+        onApplied={(newUrl) => {
+          onInpainted?.(newUrl);
+        }}
+      />
 
       {/* Lightbox */}
       {lightbox && (

@@ -18,6 +18,8 @@ const DEFAULT_SETTINGS: TryOnSettings = {
   finalPrompt: "",
   aspectRatio: "4:5",
   hdUpscale: true,
+  faceSwap: false,
+  faceImagePath: null,
 };
 
 export default function Home() {
@@ -140,6 +142,10 @@ export default function Home() {
             loading={loading}
             history={history}
             onHistorySelect={setResultUrl}
+            onInpainted={(newUrl) => {
+              setResultUrl(newUrl);
+              setHistory((prev) => [newUrl, ...prev]);
+            }}
           />
         </div>
       </main>

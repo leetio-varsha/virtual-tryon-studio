@@ -9,6 +9,7 @@ import {
   removeBackground,
   replaceBackground,
   upscaleImage,
+  swapFace,
 } from "@/lib/providers";
 
 async function fetchAsDataUri(url: string, mime = "image/png"): Promise<string> {
@@ -88,10 +89,26 @@ export async function POST(req: NextRequest) {
 
     let finalImageUrl = tryonResultUrl;
 
-    // Step 2: Background replacement (if scene or final prompt provided)
+    // Step 2: Face swap (if enabled and face reference provided)
+    const faceSwapEnabled = settings?.faceSwap === true;
+    const faceImagePath = settings?.faceImagePath as string | null | undefined;
+    if (faceSwapEnabled && faceImagePath) {
+      try {
+        const faceFilename = path.basename(faceImagePath);
+        const faceBuffer = await readFile(path.join(UPLOADS_DIR, faceFilename));
+        const faceDataUri = `data:image/jpeg;base64,${faceBuffer.toString("base64")}`;
+        const tryonDataUri = await fetchAsDataUri(finalImageUrl);
+        finalImageUrl = await swapFace(faceDataUri, tryonDataUri);
+        console.log("[TryOn] Face swap applied");
+      } catch (e) {
+        console.error("[TryOn] Face swap failed, keeping original:", e);
+      }
+    }
+
+    // Step 3: Background replacement (if scene or final prompt provided)
     const finalPromptSetting = settings?.finalPrompt || "";
     if (scenePrompt.trim() || finalPromptSetting.trim()) {
-      const tryonDataUri = await fetchAsDataUri(tryonResultUrl);
+      const tryonDataUri = await fetchAsDataUri(finalImageUrl);
 
       const transparentUrl = await removeBackground(tryonDataUri);
       const transparentBuffer = await fetchAsBuffer(transparentUrl);
@@ -103,14 +120,14 @@ export async function POST(req: NextRequest) {
       finalImageUrl = await replaceBackground(tryonDataUri, maskDataUri, scenePrompt, finalPromptSetting);
     }
 
-    // Step 3: Upscale (if enabled)
+    // Step 4: Upscale (if enabled)
     let downloadUrl = finalImageUrl;
     if (settings?.hdUpscale !== false) {
       const upscaleDataUri = await fetchAsDataUri(finalImageUrl);
       downloadUrl = await upscaleImage(upscaleDataUri);
     }
 
-    // Step 4: Crop to Instagram aspect ratio
+    // Step 5: Crop to Instagram aspect ratio
     const response = await fetch(downloadUrl);
     let resultBuffer: Buffer = Buffer.from(await response.arrayBuffer());
 
