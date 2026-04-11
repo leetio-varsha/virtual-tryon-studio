@@ -33,4 +33,5 @@ export interface TryOnSettings {
   scenePrompt: string;
   finalPrompt: string;
   aspectRatio: "4:5" | "1:1" | "9:16";
+  hdUpscale: boolean;
 }

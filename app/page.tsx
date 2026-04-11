@@ -16,6 +16,7 @@ const DEFAULT_SETTINGS: TryOnSettings = {
   scenePrompt: "",
   finalPrompt: "",
   aspectRatio: "4:5",
+  hdUpscale: true,
 };
 
 export default function Home() {

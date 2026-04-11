@@ -171,6 +171,23 @@ export default function Settings({ settings, onChange }: SettingsProps) {
             </div>
           </div>
 
+          {/* HD Upscale */}
+          <div className="flex items-start gap-3">
+            <input
+              type="checkbox"
+              checked={settings.hdUpscale}
+              onChange={(e) => update({ hdUpscale: e.target.checked })}
+              className="mt-0.5 accent-accent"
+              id="hd-toggle"
+            />
+            <label htmlFor="hd-toggle" className="text-sm cursor-pointer">
+              <span className="font-medium">HD качество</span>
+              <p className="text-xs text-muted mt-0.5">
+                Увеличивает разрешение в 2x и улучшает лицо. Результат как с профессиональной фотосессии. +10-15 сек.
+              </p>
+            </label>
+          </div>
+
           {/* Crop */}
           <div className="flex items-start gap-3">
             <input

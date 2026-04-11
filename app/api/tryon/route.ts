@@ -8,8 +8,27 @@ import { generations } from "@/lib/db/schema";
 const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN });
 
 const TRYON_MODEL = "cuuupid/idm-vton:0513734a452173b8173e907e3a59d19a36266e55b48528559432bd21c7d7e985";
-const BG_REMOVE_MODEL = "lucataco/remove-bg:95fcc2a26d3899cd6c2691c900571aeaa540f23e4f1f553e2eb6704cfbb2674b";
+const BG_REMOVE_MODEL = "lucataco/remove-bg:95fcc2a26d3899cd6c2691c900465aaeff466285a65c14638cc5f36f34befaf1";
 const INPAINT_MODEL = "black-forest-labs/flux-fill-pro";
+const UPSCALE_MODEL = "nightmareai/real-esrgan";
+
+async function runWithRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.includes("429") && attempt < maxRetries) {
+        const wait = 10 * (attempt + 1);
+        console.log(`[TryOn] Rate limited, waiting ${wait}s (attempt ${attempt + 1}/${maxRetries})...`);
+        await new Promise((r) => setTimeout(r, wait * 1000));
+        continue;
+      }
+      throw error;
+    }
+  }
+  throw new Error("Max retries exceeded");
+}
 
 async function runTryOn(
   humanImg: string,
@@ -21,7 +40,7 @@ async function runTryOn(
   crop: boolean
 ): Promise<string> {
   console.log(`[TryOn] Pass: category=${category}, steps=${steps}`);
-  const output = await replicate.run(TRYON_MODEL, {
+  const output = await runWithRetry(() => replicate.run(TRYON_MODEL, {
     input: {
       human_img: humanImg,
       garm_img: garmImg,
@@ -31,7 +50,7 @@ async function runTryOn(
       seed,
       crop,
     },
-  });
+  }));
   const url = output as unknown as string;
   console.log(`[TryOn] Pass done: ${category}`);
   return url;
@@ -50,9 +69,9 @@ async function fetchAsBuffer(url: string): Promise<Buffer> {
 
 async function removeBackground(imageDataUri: string): Promise<string> {
   console.log("[TryOn] Removing background...");
-  const output = await replicate.run(BG_REMOVE_MODEL, {
+  const output = await runWithRetry(() => replicate.run(BG_REMOVE_MODEL, {
     input: { image: imageDataUri },
-  });
+  }));
   // Returns URL to PNG with transparency
   const url = output as unknown as string;
   console.log("[TryOn] Background removed");
@@ -73,7 +92,7 @@ async function replaceBackground(
 
   console.log(`[TryOn] Replacing background: "${fullPrompt}"`);
 
-  const output = await replicate.run(INPAINT_MODEL, {
+  const output = await runWithRetry(() => replicate.run(INPAINT_MODEL, {
     input: {
       image: imageDataUri,
       mask: maskDataUri,
@@ -82,7 +101,7 @@ async function replaceBackground(
       num_inference_steps: 28,
       output_format: "png",
     },
-  });
+  }));
 
   const url = output as unknown as string;
   console.log("[TryOn] Background replaced");
@@ -180,8 +199,24 @@ export async function POST(req: NextRequest) {
       finalImageUrl = await replaceBackground(tryonDataUri, maskDataUri, scenePrompt, finalPrompt);
     }
 
+    // Step 3: Upscale for professional quality (if enabled)
+    let downloadUrl = finalImageUrl;
+    if (settings?.hdUpscale !== false) {
+      console.log("[TryOn] Upscaling for professional quality...");
+      const upscaleDataUri = await fetchAsDataUri(finalImageUrl);
+      const upscaleOutput = await runWithRetry(() => replicate.run(UPSCALE_MODEL, {
+        input: {
+          image: upscaleDataUri,
+          scale: 2,
+          face_enhance: true,
+        },
+      }));
+      downloadUrl = upscaleOutput as unknown as string;
+      console.log("[TryOn] Upscale done");
+    }
+
     // Download and crop to aspect ratio
-    const response = await fetch(finalImageUrl);
+    const response = await fetch(downloadUrl);
     let resultBuffer: Buffer = Buffer.from(await response.arrayBuffer());
 
     // Crop to Instagram aspect ratio
