@@ -25,7 +25,7 @@ async function fetchAsBuffer(url: string): Promise<Buffer> {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { modelImage, garmentImage, settings } = body;
+  const { modelImage, garmentImage, garmentImageBottom, settings } = body;
 
   if (!modelImage || !garmentImage) {
     return NextResponse.json({ error: "Model and garment images required" }, { status: 400 });
@@ -53,6 +53,16 @@ export async function POST(req: NextRequest) {
     let tryonResultUrl: string;
 
     if (category === "full_outfit") {
+      if (!garmentImageBottom) {
+        return NextResponse.json(
+          { error: "Full outfit requires two garments: top and bottom" },
+          { status: 400 },
+        );
+      }
+      const bottomFilename = path.basename(garmentImageBottom);
+      const bottomBuffer = await readFile(path.join(UPLOADS_DIR, bottomFilename));
+      const bottomDataUri = `data:image/jpeg;base64,${bottomBuffer.toString("base64")}`;
+
       console.log(`[TryOn] Full outfit — pass 1 (upper body) [${aiModel}]`);
       const upperUrl = await runTryOn(aiModel, {
         humanImage: modelDataUri,
@@ -68,7 +78,7 @@ export async function POST(req: NextRequest) {
       console.log(`[TryOn] Full outfit — pass 2 (lower body) [${aiModel}]`);
       tryonResultUrl = await runTryOn(aiModel, {
         humanImage: intermediateDataUri,
-        garmentImage: garmentDataUri,
+        garmentImage: bottomDataUri,
         category: "lower_body",
         prompt,
         steps,

@@ -33,7 +33,12 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [templatesOpen, setTemplatesOpen] = useState(false);
 
-  const canGenerate = modelImages.length > 0 && garmentImages.length > 0 && !loading;
+  const isFullOutfit = settings.category === "full_outfit";
+  const canGenerate =
+    modelImages.length > 0 &&
+    garmentImages.length > 0 &&
+    (!isFullOutfit || garmentImages.length >= 2) &&
+    !loading;
 
   const generate = useCallback(async () => {
     if (!canGenerate) return;
@@ -46,7 +51,8 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           modelImage: modelImages[0],
-          garmentImage: garmentImages[selectedGarment],
+          garmentImage: isFullOutfit ? garmentImages[0] : garmentImages[selectedGarment],
+          ...(isFullOutfit && { garmentImageBottom: garmentImages[1] }),
           settings,
         }),
       });
@@ -106,12 +112,13 @@ export default function Home() {
             {/* Right: Garments */}
             <div className="rounded-xl bg-surface border border-border p-4">
               <ImageDropZone
-                label="Одежда (референсы)"
+                label={isFullOutfit ? "Одежда (1-е = верх, 2-е = низ)" : "Одежда (референсы)"}
                 multiple
                 images={garmentImages}
-                selectedIndex={selectedGarment}
+                selectedIndex={isFullOutfit ? undefined : selectedGarment}
                 onImagesChange={setGarmentImages}
-                onSelect={setSelectedGarment}
+                onSelect={isFullOutfit ? undefined : setSelectedGarment}
+                slotLabels={isFullOutfit ? { 0: "Верх", 1: "Низ" } : undefined}
               />
             </div>
           </div>
@@ -131,6 +138,12 @@ export default function Home() {
           >
             {loading ? "Генерация..." : "Генерировать"}
           </button>
+
+          {isFullOutfit && garmentImages.length > 0 && garmentImages.length < 2 && (
+            <p className="text-amber-400 text-sm text-center">
+              Для полного костюма нужно 2 фото одежды: верх (1-е) и низ (2-е)
+            </p>
+          )}
 
           {error && (
             <p className="text-red-400 text-sm text-center">{error}</p>

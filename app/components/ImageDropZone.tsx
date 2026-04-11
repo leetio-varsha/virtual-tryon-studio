@@ -9,6 +9,7 @@ interface ImageDropZoneProps {
   selectedIndex?: number;
   onImagesChange: (images: string[]) => void;
   onSelect?: (index: number) => void;
+  slotLabels?: Record<number, string>;
 }
 
 export default function ImageDropZone({
@@ -18,6 +19,7 @@ export default function ImageDropZone({
   selectedIndex = 0,
   onImagesChange,
   onSelect,
+  slotLabels,
 }: ImageDropZoneProps) {
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -133,6 +135,11 @@ export default function ImageDropZone({
               onClick={() => onSelect?.(i)}
             >
               <img src={src} alt={`Garment ${i + 1}`} className="w-full h-full object-cover" />
+              {slotLabels?.[i] && (
+                <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-black/70 text-white text-[10px] font-medium">
+                  {slotLabels[i]}
+                </span>
+              )}
               <button
                 onClick={(e) => { e.stopPropagation(); removeImage(i); }}
                 className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 text-white flex items-center justify-center text-xs hover:bg-red-600 transition-colors"

@@ -242,7 +242,7 @@ export default function Settings({ settings, onChange }: SettingsProps) {
               <option value="dresses">Платья / комбинезоны</option>
             </select>
             <p className="text-xs text-muted mt-1">
-              «Полный костюм» — AI сначала оденет верх, потом низ (два прохода, дольше, но точнее).
+              «Полный костюм» — загрузите 2 фото одежды: 1-е = верх, 2-е = низ. AI оденет в два прохода.
             </p>
           </div>
 
