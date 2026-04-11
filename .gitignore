@@ -1,0 +1,11 @@
+node_modules/
+.env
+.env.local
+.next/
+dist/
+output/
+input/garments/
+input/models/
+data/
+*.log
+.DS_Store
