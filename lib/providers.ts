@@ -186,6 +186,33 @@ export async function replaceBackground(
   return output as unknown as string;
 }
 
+export async function inpaintRegion(
+  imageDataUri: string,
+  maskDataUri: string,
+  prompt: string,
+): Promise<string> {
+  // Higher guidance + more steps than bg replacement — region edits need
+  // tighter prompt adherence and sharper detail (logos, seams, text).
+  const fullPrompt = [prompt, "high quality, sharp detail, preserve surrounding context"]
+    .filter(Boolean)
+    .join(", ");
+  console.log(`[Inpaint] Region: "${fullPrompt}"`);
+  const output = await runWithRetry(() =>
+    replicate.run(INPAINT_MODEL, {
+      input: {
+        image: imageDataUri,
+        mask: maskDataUri,
+        prompt: fullPrompt,
+        guidance_scale: 30,
+        num_inference_steps: 40,
+        output_format: "png",
+      },
+    })
+  );
+  console.log("[Inpaint] Region regenerated");
+  return output as unknown as string;
+}
+
 export async function upscaleImage(imageDataUri: string): Promise<string> {
   console.log("[Pipeline] Upscaling...");
   const output = await runWithRetry(() =>

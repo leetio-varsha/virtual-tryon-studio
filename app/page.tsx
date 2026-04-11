@@ -142,6 +142,10 @@ export default function Home() {
             loading={loading}
             history={history}
             onHistorySelect={setResultUrl}
+            onInpainted={(newUrl) => {
+              setResultUrl(newUrl);
+              setHistory((prev) => [newUrl, ...prev]);
+            }}
           />
         </div>
       </main>
