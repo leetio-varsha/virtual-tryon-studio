@@ -13,6 +13,9 @@ const DEFAULT_SETTINGS: TryOnSettings = {
   seed: null,
   prompt: "",
   crop: true,
+  scenePrompt: "",
+  finalPrompt: "",
+  aspectRatio: "4:5",
 };
 
 export default function Home() {

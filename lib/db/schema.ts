@@ -30,4 +30,7 @@ export interface TryOnSettings {
   seed: number | null;
   prompt: string;
   crop: boolean;
+  scenePrompt: string;
+  finalPrompt: string;
+  aspectRatio: "4:5" | "1:1" | "9:16";
 }

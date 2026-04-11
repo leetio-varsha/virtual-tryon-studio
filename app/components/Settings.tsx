@@ -17,21 +17,84 @@ export default function Settings({ settings, onChange }: SettingsProps) {
 
   return (
     <div className="rounded-xl bg-surface border border-border">
-      {/* Prompt — always visible */}
-      <div className="p-4">
-        <label className="block text-xs text-muted mb-1.5 uppercase tracking-wider">
-          Описание одежды (промпт)
-        </label>
-        <input
-          type="text"
-          value={settings.prompt}
-          onChange={(e) => update({ prompt: e.target.value })}
-          placeholder="например: white cotton t-shirt with logo"
-          className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent"
-        />
-        <p className="text-xs text-muted mt-1">
-          Опишите одежду на английском — помогает AI точнее передать детали. Чем подробнее, тем лучше.
-        </p>
+      {/* Prompts — always visible */}
+      <div className="p-4 space-y-4">
+        <div>
+          <label className="block text-xs text-muted mb-1.5 uppercase tracking-wider">
+            Описание одежды
+          </label>
+          <input
+            type="text"
+            value={settings.prompt}
+            onChange={(e) => update({ prompt: e.target.value })}
+            placeholder="например: long sleeve high neck zip-up athletic top with SX logo"
+            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent"
+          />
+          <p className="text-xs text-muted mt-1">
+            Опишите одежду на английском — помогает AI точнее передать детали.
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-xs text-muted mb-1.5 uppercase tracking-wider">
+            Сцена / Фон
+          </label>
+          <input
+            type="text"
+            value={settings.scenePrompt}
+            onChange={(e) => update({ scenePrompt: e.target.value })}
+            placeholder="например: modern gym interior, soft lighting, clean background"
+            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent"
+          />
+          <p className="text-xs text-muted mt-1">
+            Опишите желаемый фон на английском. Оставьте пустым — фон останется оригинальный.
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-xs text-muted mb-1.5 uppercase tracking-wider">
+            Финальный промпт
+          </label>
+          <textarea
+            value={settings.finalPrompt}
+            onChange={(e) => update({ finalPrompt: e.target.value })}
+            placeholder={"например: professional fashion photoshoot, model posing confidently,\nsoft natural lighting, high-end Instagram aesthetic, sharp details, 4K"}
+            rows={2}
+            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent resize-y"
+          />
+          <p className="text-xs text-muted mt-1">
+            Опишите как должно выглядеть итоговое фото: стиль, освещение, настроение, качество.
+            Работает вместе с фоном. Оставьте пустым — фото останется как есть.
+          </p>
+        </div>
+
+        {/* Aspect ratio — always visible */}
+        <div>
+          <label className="block text-xs text-muted mb-1.5 uppercase tracking-wider">
+            Формат для Instagram
+          </label>
+          <div className="flex gap-2">
+            {([
+              { value: "4:5", label: "4:5", desc: "Лента" },
+              { value: "1:1", label: "1:1", desc: "Квадрат" },
+              { value: "9:16", label: "9:16", desc: "Сторис / Reels" },
+            ] as const).map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => update({ aspectRatio: opt.value })}
+                className={`
+                  flex-1 py-2 rounded-lg text-sm font-medium transition-colors border
+                  ${settings.aspectRatio === opt.value
+                    ? "bg-accent text-white border-accent"
+                    : "bg-background border-border hover:border-accent/50"}
+                `}
+              >
+                <div>{opt.label}</div>
+                <div className="text-xs opacity-70">{opt.desc}</div>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Toggle advanced */}
@@ -60,7 +123,6 @@ export default function Settings({ settings, onChange }: SettingsProps) {
             </select>
             <p className="text-xs text-muted mt-1">
               «Полный костюм» — AI сначала оденет верх, потом низ (два прохода, дольше, но точнее).
-              Для отдельных вещей выберите «Только верх» или «Только низ».
             </p>
           </div>
 
@@ -79,7 +141,7 @@ export default function Settings({ settings, onChange }: SettingsProps) {
                 className="w-full accent-accent"
               />
               <p className="text-xs text-muted mt-1">
-                Больше шагов = лучше качество, но дольше. 30 — оптимально, 20 — быстрый тест.
+                Больше = лучше качество, но дольше. 30 — оптимально.
               </p>
             </div>
 
@@ -104,7 +166,7 @@ export default function Settings({ settings, onChange }: SettingsProps) {
                 </button>
               </div>
               <p className="text-xs text-muted mt-1">
-                Одинаковый seed = одинаковый результат. Пустое поле = каждый раз новый вариант.
+                Одинаковый seed = одинаковый результат. Пустое = каждый раз новый.
               </p>
             </div>
           </div>
@@ -121,7 +183,7 @@ export default function Settings({ settings, onChange }: SettingsProps) {
             <label htmlFor="crop-toggle" className="text-sm cursor-pointer">
               <span className="font-medium">Автообрезка</span>
               <p className="text-xs text-muted mt-0.5">
-                Автоматически обрезает фото модели до пропорции 3:4. Включите, если фото не в портретном формате.
+                Обрезает фото модели до 3:4. Включите если фото не портретное.
               </p>
             </label>
           </div>
