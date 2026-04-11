@@ -246,83 +246,208 @@ export default function Settings({ settings, onChange }: SettingsProps) {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            {/* Steps */}
-            <div>
-              <label className="block text-xs text-muted mb-1.5 font-medium">
-                Шаги: {settings.steps}
-              </label>
-              <input
-                type="range"
-                min={10}
-                max={40}
-                value={settings.steps}
-                onChange={(e) => update({ steps: Number(e.target.value) })}
-                className="w-full accent-accent"
-              />
-              <p className="text-xs text-muted mt-1">
-                Больше = лучше качество, но дольше. 30 — оптимально.
-              </p>
-            </div>
-
-            {/* Seed */}
-            <div>
-              <label className="block text-xs text-muted mb-1.5 font-medium">Seed</label>
-              <div className="flex gap-2">
-                <input
-                  type="number"
-                  value={settings.seed ?? ""}
-                  onChange={(e) =>
-                    update({ seed: e.target.value ? Number(e.target.value) : null })
-                  }
-                  placeholder="случайный"
-                  className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent"
-                />
-                <button
-                  onClick={() => update({ seed: null })}
-                  className="px-3 py-2 bg-background border border-border rounded-lg text-xs hover:border-accent transition-colors"
-                >
-                  Rand
-                </button>
+          {/* ── FASHN-specific settings ── */}
+          {settings.aiModel === "fashn-v1.6" && (
+            <>
+              <div>
+                <label className="block text-xs text-muted mb-1.5 font-medium">Режим генерации</label>
+                <div className="flex gap-2">
+                  {([
+                    { value: "performance" as const, label: "Быстрый" },
+                    { value: "balanced" as const, label: "Баланс" },
+                    { value: "quality" as const, label: "Качество" },
+                  ]).map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => update({ fashnMode: opt.value })}
+                      className={`
+                        flex-1 py-2 rounded-lg text-sm font-medium transition-colors border
+                        ${settings.fashnMode === opt.value
+                          ? "bg-accent text-white border-accent"
+                          : "bg-background border-border hover:border-accent/50"}
+                      `}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-muted mt-1">
+                  Как тщательно AI будет рисовать одежду на модели.
+                  «Быстрый» — экономит время, но может потерять мелкие детали.
+                  «Качество» — дольше, зато лучше передаёт швы, логотипы и текстуру ткани.
+                </p>
               </div>
-              <p className="text-xs text-muted mt-1">
-                Одинаковый seed = одинаковый результат. Пустое = каждый раз новый.
-              </p>
+
+              <div>
+                <label className="block text-xs text-muted mb-1.5 font-medium">Тип фото одежды</label>
+                <div className="flex gap-2">
+                  {([
+                    { value: "auto" as const, label: "Авто" },
+                    { value: "flat-lay" as const, label: "Раскладка" },
+                    { value: "model" as const, label: "На модели" },
+                  ]).map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => update({ garmentPhotoType: opt.value })}
+                      className={`
+                        flex-1 py-2 rounded-lg text-sm font-medium transition-colors border
+                        ${settings.garmentPhotoType === opt.value
+                          ? "bg-accent text-white border-accent"
+                          : "bg-background border-border hover:border-accent/50"}
+                      `}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-muted mt-1">
+                  Расскажите AI, как сфотографирована одежда.
+                  «Раскладка» — одежда лежит на плоской поверхности (стол, пол).
+                  «На модели» — одежда уже надета на человека на фото-референсе.
+                  «Авто» — AI сам попробует определить, но может ошибиться.
+                </p>
+              </div>
+            </>
+          )}
+
+          {/* ── Leffa-specific settings ── */}
+          {settings.aiModel === "leffa" && (
+            <>
+              <div>
+                <label className="block text-xs text-muted mb-1.5 font-medium">
+                  Шаги: {settings.steps}
+                </label>
+                <input
+                  type="range"
+                  min={10}
+                  max={50}
+                  value={settings.steps}
+                  onChange={(e) => update({ steps: Number(e.target.value) })}
+                  className="w-full accent-accent"
+                />
+                <p className="text-xs text-muted mt-1">
+                  Сколько раз AI перерисовывает картинку, улучшая её с каждым шагом.
+                  Мало шагов (10-20) — быстро, но одежда может выглядеть размыто.
+                  Много шагов (40-50) — дольше, зато чётче швы, пуговицы и складки.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs text-muted mb-1.5 font-medium">
+                  Точность: {settings.guidanceScale.toFixed(1)}
+                </label>
+                <input
+                  type="range"
+                  min={1}
+                  max={10}
+                  step={0.5}
+                  value={settings.guidanceScale}
+                  onChange={(e) => update({ guidanceScale: Number(e.target.value) })}
+                  className="w-full accent-accent"
+                />
+                <p className="text-xs text-muted mt-1">
+                  Насколько строго AI копирует оригинальную одежду.
+                  Низкое значение (1-2) — AI рисует свободнее, может менять детали.
+                  Высокое (4-7) — AI точнее повторяет цвет, узор и форму, но картинка может стать менее естественной.
+                  Рекомендуем 2.5-4.0.
+                </p>
+              </div>
+            </>
+          )}
+
+          {/* ── IDM-VTON-specific settings ── */}
+          {settings.aiModel === "idm-vton" && (
+            <>
+              <div>
+                <label className="block text-xs text-muted mb-1.5 font-medium">
+                  Шаги: {settings.steps}
+                </label>
+                <input
+                  type="range"
+                  min={10}
+                  max={40}
+                  value={settings.steps}
+                  onChange={(e) => update({ steps: Number(e.target.value) })}
+                  className="w-full accent-accent"
+                />
+                <p className="text-xs text-muted mt-1">
+                  Сколько раз AI перерисовывает картинку, улучшая её с каждым шагом.
+                  Мало (10-15) — быстро, но грубовато. Много (30-40) — дольше, но детальнее.
+                  30 — золотая середина.
+                </p>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={settings.crop}
+                  onChange={(e) => update({ crop: e.target.checked })}
+                  className="mt-0.5 accent-accent"
+                  id="crop-toggle"
+                />
+                <label htmlFor="crop-toggle" className="text-sm cursor-pointer">
+                  <span className="font-medium">Автообрезка модели</span>
+                  <p className="text-xs text-muted mt-0.5">
+                    Обрезает фото модели до пропорций 3:4 перед обработкой.
+                    Включите, если на фото модель стоит далеко или фото горизонтальное —
+                    AI лучше работает с портретным кадрированием.
+                  </p>
+                </label>
+              </div>
+            </>
+          )}
+
+          {/* ── Common settings (all models) ── */}
+          <div className="border-t border-border pt-4 mt-4">
+            <p className="text-xs text-muted mb-3 uppercase tracking-wider">Общие</p>
+
+            <div className="space-y-4">
+              {/* Seed */}
+              <div>
+                <label className="block text-xs text-muted mb-1.5 font-medium">Seed</label>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    value={settings.seed ?? ""}
+                    onChange={(e) =>
+                      update({ seed: e.target.value ? Number(e.target.value) : null })
+                    }
+                    placeholder="случайный"
+                    className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent"
+                  />
+                  <button
+                    onClick={() => update({ seed: null })}
+                    className="px-3 py-2 bg-background border border-border rounded-lg text-xs hover:border-accent transition-colors"
+                  >
+                    Rand
+                  </button>
+                </div>
+                <p className="text-xs text-muted mt-1">
+                  Это как «номер рецепта» для AI. Если вставить одно и то же число —
+                  AI нарисует точно такой же результат. Полезно когда нашли хороший вариант
+                  и хотите повторить. Пустое поле = каждый раз новый случайный результат.
+                </p>
+              </div>
+
+              {/* HD Upscale */}
+              <div className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={settings.hdUpscale}
+                  onChange={(e) => update({ hdUpscale: e.target.checked })}
+                  className="mt-0.5 accent-accent"
+                  id="hd-toggle"
+                />
+                <label htmlFor="hd-toggle" className="text-sm cursor-pointer">
+                  <span className="font-medium">HD качество</span>
+                  <p className="text-xs text-muted mt-0.5">
+                    После генерации AI увеличивает картинку в 2 раза и улучшает лицо.
+                    Результат выглядит как профессиональная фотография — чёткие поры кожи,
+                    ресницы, текстура ткани. Добавляет ~10-15 секунд к генерации.
+                  </p>
+                </label>
+              </div>
             </div>
-          </div>
-
-          {/* HD Upscale */}
-          <div className="flex items-start gap-3">
-            <input
-              type="checkbox"
-              checked={settings.hdUpscale}
-              onChange={(e) => update({ hdUpscale: e.target.checked })}
-              className="mt-0.5 accent-accent"
-              id="hd-toggle"
-            />
-            <label htmlFor="hd-toggle" className="text-sm cursor-pointer">
-              <span className="font-medium">HD качество</span>
-              <p className="text-xs text-muted mt-0.5">
-                Увеличивает разрешение в 2x и улучшает лицо. Результат как с профессиональной фотосессии. +10-15 сек.
-              </p>
-            </label>
-          </div>
-
-          {/* Crop */}
-          <div className="flex items-start gap-3">
-            <input
-              type="checkbox"
-              checked={settings.crop}
-              onChange={(e) => update({ crop: e.target.checked })}
-              className="mt-0.5 accent-accent"
-              id="crop-toggle"
-            />
-            <label htmlFor="crop-toggle" className="text-sm cursor-pointer">
-              <span className="font-medium">Автообрезка</span>
-              <p className="text-xs text-muted mt-0.5">
-                Обрезает фото модели до 3:4. Включите если фото не портретное.
-              </p>
-            </label>
           </div>
         </div>
       )}

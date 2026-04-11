@@ -38,6 +38,11 @@ export interface TryOnInput {
   steps: number;
   seed: number | null;
   crop: boolean;
+  // FASHN-specific
+  fashnMode?: "performance" | "balanced" | "quality";
+  garmentPhotoType?: "auto" | "flat-lay" | "model";
+  // Leffa-specific
+  guidanceScale?: number;
 }
 
 // --- IDM-VTON (Replicate) ---
@@ -72,13 +77,17 @@ const FASHN_CATEGORIES: Record<string, "tops" | "bottoms" | "one-pieces" | "auto
 
 async function runFashn(input: TryOnInput): Promise<string> {
   const category = FASHN_CATEGORIES[input.category] ?? "tops";
-  console.log(`[FASHN v1.6] category=${category}`);
+  const mode = input.fashnMode ?? "quality";
+  console.log(`[FASHN v1.6] category=${category}, mode=${mode}, garmentPhoto=${input.garmentPhotoType ?? "auto"}`);
   const result = await runWithRetry(() =>
     fal.subscribe("fal-ai/fashn/tryon/v1.6", {
       input: {
         model_image: input.humanImage,
         garment_image: input.garmentImage,
         category,
+        mode,
+        garment_photo_type: input.garmentPhotoType ?? "auto",
+        ...(input.seed != null ? { seed: input.seed } : {}),
       },
     })
   );
@@ -97,7 +106,7 @@ async function runLeffa(input: TryOnInput): Promise<string> {
         garment_image_url: input.garmentImage,
         garment_type: input.category as "upper_body" | "lower_body" | "dresses",
         num_inference_steps: Math.min(input.steps, 50),
-        guidance_scale: 2.5,
+        guidance_scale: input.guidanceScale ?? 2.5,
         ...(input.seed != null ? { seed: input.seed } : {}),
       },
     })

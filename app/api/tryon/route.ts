@@ -48,6 +48,9 @@ export async function POST(req: NextRequest) {
     const prompt = settings?.prompt || "clothing item";
     const category = settings?.category || "upper_body";
     const scenePrompt = settings?.scenePrompt || "";
+    const fashnMode = settings?.fashnMode || "quality";
+    const garmentPhotoType = settings?.garmentPhotoType || "auto";
+    const guidanceScale = settings?.guidanceScale ?? 2.5;
 
     // Step 1: Virtual try-on
     let tryonResultUrl: string;
@@ -72,6 +75,9 @@ export async function POST(req: NextRequest) {
         steps,
         seed,
         crop,
+        fashnMode,
+        garmentPhotoType,
+        guidanceScale,
       });
       const intermediateDataUri = await fetchAsDataUri(upperUrl);
 
@@ -84,6 +90,9 @@ export async function POST(req: NextRequest) {
         steps,
         seed,
         crop: false,
+        fashnMode,
+        garmentPhotoType,
+        guidanceScale,
       });
     } else {
       tryonResultUrl = await runTryOn(aiModel, {
@@ -94,6 +103,9 @@ export async function POST(req: NextRequest) {
         steps,
         seed,
         crop,
+        fashnMode,
+        garmentPhotoType,
+        guidanceScale,
       });
     }
 

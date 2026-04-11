@@ -20,6 +20,9 @@ const DEFAULT_SETTINGS: TryOnSettings = {
   hdUpscale: true,
   faceSwap: false,
   faceImagePath: null,
+  fashnMode: "quality",
+  garmentPhotoType: "auto",
+  guidanceScale: 2.5,
 };
 
 export default function Home() {

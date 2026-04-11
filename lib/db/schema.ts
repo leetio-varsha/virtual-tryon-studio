@@ -39,4 +39,9 @@ export interface TryOnSettings {
   hdUpscale: boolean;
   faceSwap: boolean;
   faceImagePath: string | null;
+  // FASHN-specific
+  fashnMode: "performance" | "balanced" | "quality";
+  garmentPhotoType: "auto" | "flat-lay" | "model";
+  // Leffa-specific
+  guidanceScale: number;
 }
