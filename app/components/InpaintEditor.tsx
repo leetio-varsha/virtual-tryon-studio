@@ -28,18 +28,19 @@ export default function InpaintEditor({ open, imageUrl, onClose, onApplied }: In
   const [drawing, setDrawing] = useState(false);
   const currentStrokeRef = useRef<Stroke | null>(null);
   const [prompt, setPrompt] = useState("");
+  const [referenceDataUri, setReferenceDataUri] = useState<string | null>(null);
+  const refInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Reset on open
+  // Reset on open or when image changes (e.g. after applying inpaint)
   useEffect(() => {
-    if (open) {
-      setStrokes([]);
-      setRedoStack([]);
-      setPrompt("");
-      setError(null);
-    }
-  }, [open]);
+    setStrokes([]);
+    setRedoStack([]);
+    setPrompt("");
+    setReferenceDataUri(null);
+    setError(null);
+  }, [open, imageUrl]);
 
   // Load image into canvas when opened
   useEffect(() => {
@@ -216,6 +217,7 @@ export default function InpaintEditor({ open, imageUrl, onClose, onApplied }: In
           imagePath: imageUrl,
           maskDataUri: mask,
           prompt: prompt.trim(),
+          ...(referenceDataUri ? { referenceDataUri } : {}),
         }),
       });
       const data = await res.json();
@@ -310,18 +312,75 @@ export default function InpaintEditor({ open, imageUrl, onClose, onApplied }: In
             </div>
           </div>
 
-          {/* Prompt */}
-          <div>
+          {/* Prompt + Reference */}
+          <div className="space-y-2">
             <input
               type="text"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Что должно быть в этой области? Например: gothic SX logo in black, flatlock stitching"
+              placeholder="Что должно быть в этой области? Например: flatlock seams, black contrast stitching along sleeves"
               disabled={loading}
               className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent disabled:opacity-50"
             />
-            <p className="text-xs text-muted mt-1">
-              Опиши на английском — лучше результат. Пример: {'"'}SX logo, black text, athletic style{'"'}.
+
+            {/* Reference image */}
+            <div className="flex items-center gap-3">
+              {referenceDataUri ? (
+                <>
+                  <img
+                    src={referenceDataUri}
+                    alt="Reference"
+                    className="w-14 h-14 rounded-lg object-cover border border-accent"
+                  />
+                  <div className="flex-1">
+                    <p className="text-xs text-muted">Референс загружен — AI скопирует детали с него</p>
+                    <div className="flex gap-2 mt-1">
+                      <button
+                        onClick={() => refInputRef.current?.click()}
+                        disabled={loading}
+                        className="text-xs px-2 py-1 bg-background border border-border rounded hover:border-accent transition-colors disabled:opacity-50"
+                      >
+                        Заменить
+                      </button>
+                      <button
+                        onClick={() => setReferenceDataUri(null)}
+                        disabled={loading}
+                        className="text-xs px-2 py-1 bg-background border border-border rounded hover:border-red-500 transition-colors disabled:opacity-50"
+                      >
+                        Убрать
+                      </button>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <button
+                  onClick={() => refInputRef.current?.click()}
+                  disabled={loading}
+                  className="flex-1 py-2 border border-dashed border-border rounded-lg text-xs text-muted hover:border-accent hover:text-foreground transition-colors disabled:opacity-50"
+                >
+                  + Загрузить референс (фото оригинальной одежды/детали)
+                </button>
+              )}
+              <input
+                ref={refInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = () => setReferenceDataUri(reader.result as string);
+                  reader.readAsDataURL(file);
+                  e.target.value = "";
+                }}
+              />
+            </div>
+
+            <p className="text-xs text-muted">
+              {referenceDataUri
+                ? "AI увидит оригинальную одежду и точно скопирует швы, текстуру и цвет в замаскированную область."
+                : "Опиши на английском. Добавь референс — AI точнее скопирует детали одежды."}
             </p>
           </div>
 

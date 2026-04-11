@@ -8,7 +8,7 @@ import TemplateManager from "./components/TemplateManager";
 import type { TryOnSettings } from "@/lib/db/schema";
 
 const DEFAULT_SETTINGS: TryOnSettings = {
-  aiModel: "fashn-v1.6",
+  aiModel: "hybrid-fashn-flux",
   category: "full_outfit",
   steps: 30,
   seed: null,
@@ -37,6 +37,7 @@ export default function Home() {
   const [templatesOpen, setTemplatesOpen] = useState(false);
 
   const isPhotoshoot = settings.aiModel === "flux-photoshoot";
+  const isHybrid = settings.aiModel === "hybrid-fashn-flux";
   const isFullOutfit = !isPhotoshoot && settings.category === "full_outfit";
   const canGenerate =
     modelImages.length > 0 &&

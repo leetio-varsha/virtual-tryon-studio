@@ -3,7 +3,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { db, RESULTS_DIR, UPLOADS_DIR } from "@/lib/db";
 import { generations } from "@/lib/db/schema";
-import { inpaintRegion } from "@/lib/providers";
+import { inpaintRegion, inpaintWithReference } from "@/lib/providers";
 
 async function readImageFromStorage(filename: string): Promise<Buffer> {
   const safeName = path.basename(filename);
@@ -19,10 +19,11 @@ async function readImageFromStorage(filename: string): Promise<Buffer> {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { imagePath, maskDataUri, prompt } = body as {
+  const { imagePath, maskDataUri, prompt, referenceDataUri } = body as {
     imagePath?: string;
     maskDataUri?: string;
     prompt?: string;
+    referenceDataUri?: string;
   };
 
   if (!imagePath || !maskDataUri || !prompt?.trim()) {
@@ -37,19 +38,49 @@ export async function POST(req: NextRequest) {
     const imageBuffer = await readImageFromStorage(imagePath);
     const imageDataUri = `data:image/png;base64,${imageBuffer.toString("base64")}`;
 
-    const resultUrl = await inpaintRegion(imageDataUri, maskDataUri, prompt);
+    let resultUrl: string;
 
-    // Fetch result and save locally so we keep full history under /api/files/
-    const response = await fetch(resultUrl);
-    const resultBuffer = Buffer.from(await response.arrayBuffer());
-    const resultFilename = `result_${Date.now()}.png`;
-    await writeFile(path.join(RESULTS_DIR, resultFilename), resultBuffer);
-    const savedUrl = `/api/files/${resultFilename}`;
+    if (referenceDataUri) {
+      // Reference-guided: FLUX.2 Pro Edit (sees original + reference), then composite with mask
+      console.log("[Inpaint] Using reference-guided mode");
+      const editedUrl = await inpaintWithReference(imageDataUri, referenceDataUri, prompt);
+
+      // Composite: only take the masked region from FLUX.2 result, keep rest from original
+      const editedRes = await fetch(editedUrl);
+      const editedBuffer = Buffer.from(await editedRes.arrayBuffer());
+
+      // Decode mask from data URI
+      const maskBase64 = maskDataUri.replace(/^data:image\/\w+;base64,/, "");
+      const maskBuffer = Buffer.from(maskBase64, "base64");
+
+      const { compositeWithMask } = await import("@/lib/image-utils");
+      const composited = await compositeWithMask(imageBuffer, editedBuffer, maskBuffer);
+
+      // Save composited result and serve
+      const compFilename = `result_${Date.now()}.png`;
+      await writeFile(path.join(RESULTS_DIR, compFilename), composited);
+      resultUrl = `/api/files/${compFilename}`;
+      console.log(`[Inpaint+Ref] Composited: ${resultUrl}`);
+    } else {
+      // Standard text-only inpainting
+      resultUrl = await inpaintRegion(imageDataUri, maskDataUri, prompt);
+    }
+
+    // For reference mode, result is already saved locally.
+    // For standard mode, fetch remote URL and save locally.
+    let savedUrl = resultUrl;
+    if (!referenceDataUri) {
+      const response = await fetch(resultUrl);
+      const resultBuffer = Buffer.from(await response.arrayBuffer());
+      const resultFilename = `result_${Date.now()}.png`;
+      await writeFile(path.join(RESULTS_DIR, resultFilename), resultBuffer);
+      savedUrl = `/api/files/${resultFilename}`;
+    }
 
     await db.insert(generations).values({
       modelImagePath: imagePath,
       garmentImagePath: imagePath,
-      settings: JSON.stringify({ inpaint: true, prompt }),
+      settings: JSON.stringify({ inpaint: true, prompt, hasReference: !!referenceDataUri }),
       resultImagePath: savedUrl,
       templateId: null,
     });

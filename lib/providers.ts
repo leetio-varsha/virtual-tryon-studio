@@ -166,6 +166,58 @@ export async function runPhotoshoot(input: PhotoshootInput): Promise<string> {
   return url;
 }
 
+// --- Hybrid enhance: FASHN result → FLUX.2 Pro Edit for photorealistic scene ---
+
+export interface HybridEnhanceInput {
+  fashnResultImage: string;   // data URI of FASHN try-on output
+  garmentImages: string[];     // original garment data URIs (1 or 2 for full outfit)
+  scenePrompt: string;
+  finalPrompt: string;
+  aspectRatio?: string;
+  seed?: number | null;
+}
+
+export async function runHybridEnhance(input: HybridEnhanceInput): Promise<string> {
+  const scene = input.scenePrompt || "clean studio background";
+  const style = input.finalPrompt || "professional fashion photography, sharp details, 4K";
+
+  const imageUrls = [input.fashnResultImage, ...input.garmentImages];
+  const isFullOutfit = input.garmentImages.length >= 2;
+
+  const clothingRef = isFullOutfit
+    ? "top matching @image2 and bottom matching @image3"
+    : "matching @image2";
+
+  const prompt = [
+    `The person from @image1 in ${scene},`,
+    `wearing the exact same outfit with all original clothing details,`,
+    `seams, logos, textures, patterns and colors perfectly preserved ${clothingRef},`,
+    style,
+  ].join(" ");
+
+  console.log(`[Hybrid] FLUX.2 Pro Edit enhance — ${imageUrls.length} refs, prompt: "${prompt.slice(0, 120)}..."`);
+
+  const result = await runWithRetry(() =>
+    fal.subscribe("fal-ai/flux-2-pro/edit", {
+      input: {
+        image_urls: imageUrls,
+        prompt,
+        ...(input.seed != null ? { seed: input.seed } : {}),
+      },
+    })
+  );
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const r = result as any;
+  const url = r?.data?.images?.[0]?.url ?? r?.images?.[0]?.url ?? r?.data?.image?.url ?? r?.image?.url;
+  if (!url) {
+    console.error("[Hybrid] Unexpected response:", JSON.stringify(r).slice(0, 500));
+    throw new Error("FLUX.2 Pro Edit (hybrid enhance) returned no image URL");
+  }
+  console.log("[Hybrid] Scene enhancement done");
+  return url;
+}
+
 // --- Face swap (Half-Moon AI via fal.ai) ---
 
 export async function swapFace(
@@ -246,16 +298,48 @@ export async function replaceBackground(
   return output as unknown as string;
 }
 
+export async function inpaintWithReference(
+  imageDataUri: string,
+  referenceDataUri: string,
+  prompt: string,
+): Promise<string> {
+  const fullPrompt = [
+    `The image from @image1 but fix the highlighted area to exactly match`,
+    `the clothing details, seams, textures, and colors from @image2.`,
+    prompt,
+    "preserve everything else unchanged, high quality, sharp detail",
+  ].join(" ");
+
+  console.log(`[Inpaint+Ref] FLUX.2 Pro Edit — "${fullPrompt.slice(0, 120)}..."`);
+  const result = await runWithRetry(() =>
+    fal.subscribe("fal-ai/flux-2-pro/edit", {
+      input: {
+        image_urls: [imageDataUri, referenceDataUri],
+        prompt: fullPrompt,
+      },
+    })
+  );
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const r = result as any;
+  const url = r?.data?.images?.[0]?.url ?? r?.images?.[0]?.url ?? r?.data?.image?.url ?? r?.image?.url;
+  if (!url) {
+    console.error("[Inpaint+Ref] Unexpected response:", JSON.stringify(r).slice(0, 500));
+    throw new Error("FLUX.2 Pro Edit (inpaint ref) returned no image URL");
+  }
+  console.log("[Inpaint+Ref] Done");
+  return url;
+}
+
 export async function inpaintRegion(
   imageDataUri: string,
   maskDataUri: string,
   prompt: string,
 ): Promise<string> {
-  // Higher guidance + more steps than bg replacement — region edits need
-  // tighter prompt adherence and sharper detail (logos, seams, text).
-  const fullPrompt = [prompt, "high quality, sharp detail, preserve surrounding context"]
-    .filter(Boolean)
-    .join(", ");
+  const fullPrompt = [
+    prompt,
+    "seamlessly blended with surrounding area, matching lighting and style,",
+    "high quality, sharp detail, photorealistic",
+  ].join(", ");
   console.log(`[Inpaint] Region: "${fullPrompt}"`);
   const output = await runWithRetry(() =>
     replicate.run(INPAINT_MODEL, {
@@ -263,8 +347,8 @@ export async function inpaintRegion(
         image: imageDataUri,
         mask: maskDataUri,
         prompt: fullPrompt,
-        guidance_scale: 30,
-        num_inference_steps: 40,
+        guidance_scale: 7,
+        num_inference_steps: 35,
         output_format: "png",
       },
     })

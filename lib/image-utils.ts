@@ -32,6 +32,52 @@ export async function createInvertedMaskFromAlpha(transparentPngBuffer: Buffer):
 }
 
 /**
+ * Composite two images using a mask: take masked (white) regions from `edited`,
+ * keep everything else from `original`. Both images must be the same size.
+ */
+export async function compositeWithMask(
+  originalBuffer: Buffer,
+  editedBuffer: Buffer,
+  maskBuffer: Buffer,
+): Promise<Buffer> {
+  const { width, height } = await sharp(originalBuffer).metadata();
+  if (!width || !height) throw new Error("Could not read image dimensions");
+
+  // Resize edited and mask to match original dimensions
+  const resizedEdited = await sharp(editedBuffer)
+    .resize(width, height, { fit: "fill" })
+    .ensureAlpha()
+    .raw()
+    .toBuffer();
+
+  const resizedMask = await sharp(maskBuffer)
+    .resize(width, height, { fit: "fill" })
+    .grayscale()
+    .raw()
+    .toBuffer();
+
+  const originalRaw = await sharp(originalBuffer)
+    .ensureAlpha()
+    .raw()
+    .toBuffer();
+
+  // Blend: where mask is white (255) use edited, where black (0) use original
+  const result = Buffer.alloc(width * height * 4);
+  for (let i = 0; i < width * height; i++) {
+    const maskVal = resizedMask[i] / 255; // 0..1
+    const oi = i * 4;
+    result[oi] = Math.round(originalRaw[oi] * (1 - maskVal) + resizedEdited[oi] * maskVal);
+    result[oi + 1] = Math.round(originalRaw[oi + 1] * (1 - maskVal) + resizedEdited[oi + 1] * maskVal);
+    result[oi + 2] = Math.round(originalRaw[oi + 2] * (1 - maskVal) + resizedEdited[oi + 2] * maskVal);
+    result[oi + 3] = 255;
+  }
+
+  return sharp(result, { raw: { width, height, channels: 4 } })
+    .png()
+    .toBuffer();
+}
+
+/**
  * Resize/crop image to target aspect ratio for Instagram
  */
 export async function cropToAspectRatio(
