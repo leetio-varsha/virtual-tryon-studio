@@ -25,9 +25,9 @@ export type Template = typeof templates.$inferSelect;
 export type Generation = typeof generations.$inferSelect;
 
 export interface TryOnSettings {
-  category: "upper_body" | "lower_body" | "dresses";
+  category: "upper_body" | "lower_body" | "dresses" | "full_outfit";
   steps: number;
-  guidanceScale: number;
   seed: number | null;
   prompt: string;
+  crop: boolean;
 }

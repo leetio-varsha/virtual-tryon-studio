@@ -8,11 +8,11 @@ import TemplateManager from "./components/TemplateManager";
 import type { TryOnSettings } from "@/lib/db/schema";
 
 const DEFAULT_SETTINGS: TryOnSettings = {
-  category: "upper_body",
+  category: "full_outfit",
   steps: 30,
-  guidanceScale: 2.0,
   seed: null,
   prompt: "",
+  crop: true,
 };
 
 export default function Home() {

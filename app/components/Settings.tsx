@@ -29,6 +29,9 @@ export default function Settings({ settings, onChange }: SettingsProps) {
           placeholder="например: white cotton t-shirt with logo"
           className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent"
         />
+        <p className="text-xs text-muted mt-1">
+          Опишите одежду на английском — помогает AI точнее передать детали. Чем подробнее, тем лучше.
+        </p>
       </div>
 
       {/* Toggle advanced */}
@@ -36,77 +39,91 @@ export default function Settings({ settings, onChange }: SettingsProps) {
         onClick={() => setOpen(!open)}
         className="w-full px-4 py-2 text-xs text-muted hover:text-foreground flex items-center gap-1 border-t border-border transition-colors"
       >
-        <span className={`transition-transform ${open ? "rotate-90" : ""}`}>▶</span>
+        <span className={`transition-transform ${open ? "rotate-90" : ""}`}>&#9654;</span>
         Расширенные настройки
       </button>
 
       {open && (
-        <div className="px-4 pb-4 grid grid-cols-2 gap-4">
+        <div className="px-4 pb-4 space-y-4">
           {/* Category */}
           <div>
-            <label className="block text-xs text-muted mb-1.5">Категория</label>
+            <label className="block text-xs text-muted mb-1.5 font-medium">Категория</label>
             <select
               value={settings.category}
               onChange={(e) => update({ category: e.target.value as TryOnSettings["category"] })}
               className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent"
             >
-              <option value="upper_body">Верх</option>
-              <option value="lower_body">Низ</option>
-              <option value="dresses">Платья</option>
+              <option value="full_outfit">Полный костюм (верх + низ)</option>
+              <option value="upper_body">Только верх (футболки, блузки, куртки)</option>
+              <option value="lower_body">Только низ (юбки, брюки, шорты)</option>
+              <option value="dresses">Платья / комбинезоны</option>
             </select>
+            <p className="text-xs text-muted mt-1">
+              «Полный костюм» — AI сначала оденет верх, потом низ (два прохода, дольше, но точнее).
+              Для отдельных вещей выберите «Только верх» или «Только низ».
+            </p>
           </div>
 
-          {/* Steps */}
-          <div>
-            <label className="block text-xs text-muted mb-1.5">
-              Шаги: {settings.steps}
-            </label>
-            <input
-              type="range"
-              min={20}
-              max={50}
-              value={settings.steps}
-              onChange={(e) => update({ steps: Number(e.target.value) })}
-              className="w-full accent-accent"
-            />
-          </div>
-
-          {/* Guidance Scale */}
-          <div>
-            <label className="block text-xs text-muted mb-1.5">
-              Guidance: {settings.guidanceScale.toFixed(1)}
-            </label>
-            <input
-              type="range"
-              min={1}
-              max={5}
-              step={0.1}
-              value={settings.guidanceScale}
-              onChange={(e) => update({ guidanceScale: Number(e.target.value) })}
-              className="w-full accent-accent"
-            />
-          </div>
-
-          {/* Seed */}
-          <div>
-            <label className="block text-xs text-muted mb-1.5">Seed</label>
-            <div className="flex gap-2">
+          <div className="grid grid-cols-2 gap-4">
+            {/* Steps */}
+            <div>
+              <label className="block text-xs text-muted mb-1.5 font-medium">
+                Шаги: {settings.steps}
+              </label>
               <input
-                type="number"
-                value={settings.seed ?? ""}
-                onChange={(e) =>
-                  update({ seed: e.target.value ? Number(e.target.value) : null })
-                }
-                placeholder="random"
-                className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent"
+                type="range"
+                min={10}
+                max={40}
+                value={settings.steps}
+                onChange={(e) => update({ steps: Number(e.target.value) })}
+                className="w-full accent-accent"
               />
-              <button
-                onClick={() => update({ seed: null })}
-                className="px-3 py-2 bg-background border border-border rounded-lg text-xs hover:border-accent transition-colors"
-              >
-                Rand
-              </button>
+              <p className="text-xs text-muted mt-1">
+                Больше шагов = лучше качество, но дольше. 30 — оптимально, 20 — быстрый тест.
+              </p>
             </div>
+
+            {/* Seed */}
+            <div>
+              <label className="block text-xs text-muted mb-1.5 font-medium">Seed</label>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  value={settings.seed ?? ""}
+                  onChange={(e) =>
+                    update({ seed: e.target.value ? Number(e.target.value) : null })
+                  }
+                  placeholder="случайный"
+                  className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent"
+                />
+                <button
+                  onClick={() => update({ seed: null })}
+                  className="px-3 py-2 bg-background border border-border rounded-lg text-xs hover:border-accent transition-colors"
+                >
+                  Rand
+                </button>
+              </div>
+              <p className="text-xs text-muted mt-1">
+                Одинаковый seed = одинаковый результат. Пустое поле = каждый раз новый вариант.
+              </p>
+            </div>
+          </div>
+
+          {/* Crop */}
+          <div className="flex items-start gap-3">
+            <input
+              type="checkbox"
+              checked={settings.crop}
+              onChange={(e) => update({ crop: e.target.checked })}
+              className="mt-0.5 accent-accent"
+              id="crop-toggle"
+            />
+            <label htmlFor="crop-toggle" className="text-sm cursor-pointer">
+              <span className="font-medium">Автообрезка</span>
+              <p className="text-xs text-muted mt-0.5">
+                Автоматически обрезает фото модели до пропорции 3:4. Включите, если фото не в портретном формате.
+              </p>
+            </label>
           </div>
         </div>
       )}
