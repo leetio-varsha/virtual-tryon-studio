@@ -24,7 +24,7 @@ export const generations = sqliteTable("generations", {
 export type Template = typeof templates.$inferSelect;
 export type Generation = typeof generations.$inferSelect;
 
-export type AiModel = "idm-vton" | "fashn-v1.6" | "leffa" | "flux-photoshoot" | "hybrid-fashn-flux" | "grok-photoshoot";
+export type AiModel = "idm-vton" | "fashn-v1.6" | "leffa" | "flux-photoshoot" | "hybrid-fashn-flux" | "grok-photoshoot" | "gemini-photoshoot";
 
 export interface TryOnSettings {
   aiModel: AiModel;
