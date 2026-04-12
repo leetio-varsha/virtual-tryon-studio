@@ -166,6 +166,36 @@ export async function runPhotoshoot(input: PhotoshootInput): Promise<string> {
   return url;
 }
 
+// --- Grok Imagine (xAI via fal.ai) — Fast photoshoot pipeline ---
+
+export async function runGrokPhotoshoot(input: PhotoshootInput): Promise<string> {
+  const scene = input.scenePrompt || "clean studio background";
+  const style = input.finalPrompt || "professional fashion photography, sharp details, 4K";
+  const prompt = `The person from @image1 wearing the outfit from @image2, ${scene}, ${style}`;
+
+  console.log(`[Grok] Grok Imagine Edit — prompt: "${prompt.slice(0, 120)}..."`);
+
+  const result = await runWithRetry(() =>
+    fal.subscribe("xai/grok-imagine-image/edit", {
+      input: {
+        image_urls: [input.modelImage, input.garmentImage],
+        prompt,
+        ...(input.seed != null ? { seed: input.seed } : {}),
+      },
+    })
+  );
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const r = result as any;
+  const url = r?.data?.images?.[0]?.url ?? r?.images?.[0]?.url ?? r?.data?.image?.url ?? r?.image?.url;
+  if (!url) {
+    console.error("[Grok] Unexpected response:", JSON.stringify(r).slice(0, 500));
+    throw new Error("Grok Imagine returned no image URL");
+  }
+  console.log("[Grok] Done");
+  return url;
+}
+
 // --- Hybrid enhance: FASHN result → FLUX.2 Pro Edit for photorealistic scene ---
 
 export interface HybridEnhanceInput {

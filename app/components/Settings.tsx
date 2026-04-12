@@ -46,6 +46,7 @@ export default function Settings({ settings, onChange }: SettingsProps) {
           <div className="grid grid-cols-2 gap-2">
             {([
               { value: "hybrid-fashn-flux" as AiModel, label: "Гибрид", desc: "FASHN + FLUX.2" },
+              { value: "grok-photoshoot" as AiModel, label: "Grok", desc: "6с · $0.02" },
               { value: "flux-photoshoot" as AiModel, label: "Фотошут", desc: "FLUX.2 — быстрый" },
               { value: "fashn-v1.6" as AiModel, label: "FASHN v1.6", desc: "Точные детали" },
               { value: "leffa" as AiModel, label: "Leffa", desc: "CVPR 2025" },
@@ -70,6 +71,8 @@ export default function Settings({ settings, onChange }: SettingsProps) {
           <p className="text-xs text-muted mt-1">
             {settings.aiModel === "hybrid-fashn-flux"
               ? "Гибрид — FASHN точно копирует одежду (швы, логотипы, текстура), затем FLUX.2 создаёт реалистичную сцену. Лучшее качество, но дольше."
+              : settings.aiModel === "grok-photoshoot"
+              ? "Grok Imagine — xAI, 6 секунд, $0.02. Фотореалистичные сцены, хорошо сохраняет одежду."
               : settings.aiModel === "flux-photoshoot"
               ? "FLUX.2 Pro — генерирует полный фотошут: модель + одежда + сцена в одном кадре. Быстро, но может менять детали одежды."
               : "FASHN — точные логотипы и швы. Leffa — Meta CVPR 2025. IDM-VTON — быстрая и дешёвая."}
@@ -88,7 +91,7 @@ export default function Settings({ settings, onChange }: SettingsProps) {
             className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent"
           />
           <p className="text-xs text-muted mt-1">
-            {settings.aiModel === "flux-photoshoot" || settings.aiModel === "hybrid-fashn-flux"
+            {settings.aiModel === "flux-photoshoot" || settings.aiModel === "grok-photoshoot" || settings.aiModel === "hybrid-fashn-flux"
               ? "Обязательно. Опишите где происходит съёмка: кафе в Париже, фитнес-зал, улица Дубая..."
               : "Опишите желаемый фон на английском. Оставьте пустым — фон останется оригинальный."}
           </p>
@@ -221,8 +224,8 @@ export default function Settings({ settings, onChange }: SettingsProps) {
 
       {open && (
         <div className="px-4 pb-4 space-y-4">
-          {/* Category — not needed for flux-photoshoot (but needed for hybrid) */}
-          {settings.aiModel !== "flux-photoshoot" && (
+          {/* Category — not needed for photoshoot models (but needed for hybrid) */}
+          {settings.aiModel !== "flux-photoshoot" && settings.aiModel !== "grok-photoshoot" && (
             <div>
               <label className="block text-xs text-muted mb-1.5 font-medium">Категория</label>
               <select
