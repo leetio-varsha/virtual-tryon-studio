@@ -9,6 +9,7 @@ import {
   runPhotoshoot,
   runGrokPhotoshoot,
   runGeminiPhotoshoot,
+  runGptImagePhotoshoot,
   runHybridEnhance,
   removeBackground,
   replaceBackground,
@@ -205,6 +206,59 @@ export async function POST(req: NextRequest) {
       });
 
       console.log(`[Gemini] Done: ${savedUrl}`);
+      return NextResponse.json({ resultUrl: savedUrl });
+    }
+
+    // ═══ GPT Image 1.5 Photoshoot — max quality ═══
+    if (aiModel === "gpt-image-photoshoot") {
+      const scenePrompt = settings?.scenePrompt || "professional studio, clean background";
+      const finalPrompt = settings?.finalPrompt || "professional fashion photography, sharp details, 4K";
+
+      let resultUrl = await runGptImagePhotoshoot({
+        modelImage: modelDataUri,
+        garmentImage: garmentDataUri,
+        scenePrompt,
+        finalPrompt,
+        aspectRatio,
+        seed,
+      });
+
+      // Optional face swap
+      if (settings?.faceSwap === true && settings?.faceImagePath) {
+        try {
+          const faceFilename = path.basename(settings.faceImagePath);
+          const faceBuffer = await readFile(path.join(UPLOADS_DIR, faceFilename));
+          const faceDataUri = `data:image/jpeg;base64,${faceBuffer.toString("base64")}`;
+          const resultDataUri = await fetchAsDataUri(resultUrl);
+          resultUrl = await swapFace(faceDataUri, resultDataUri);
+          console.log("[GPT-Image] Face swap applied");
+        } catch (e) {
+          console.error("[GPT-Image] Face swap failed, keeping original:", e);
+        }
+      }
+
+      // Optional upscale
+      if (settings?.hdUpscale !== false) {
+        const upscaleDataUri = await fetchAsDataUri(resultUrl);
+        resultUrl = await upscaleImage(upscaleDataUri);
+      }
+
+      // Download and save
+      const response = await fetch(resultUrl);
+      const resultBuffer: Buffer = Buffer.from(await response.arrayBuffer());
+      const resultFilename = `result_${Date.now()}.png`;
+      await writeFile(path.join(RESULTS_DIR, resultFilename), resultBuffer);
+      const savedUrl = `/api/files/${resultFilename}`;
+
+      await db.insert(generations).values({
+        modelImagePath: modelImage,
+        garmentImagePath: garmentImage,
+        settings: JSON.stringify(settings || {}),
+        resultImagePath: savedUrl,
+        templateId: body.templateId || null,
+      });
+
+      console.log(`[GPT-Image] Done: ${savedUrl}`);
       return NextResponse.json({ resultUrl: savedUrl });
     }
 

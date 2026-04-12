@@ -226,6 +226,44 @@ export async function runGeminiPhotoshoot(input: PhotoshootInput): Promise<strin
   return url;
 }
 
+// --- GPT Image 1.5 (OpenAI via fal.ai) — Max quality photoshoot ---
+
+const GPT_IMAGE_SIZES: Record<string, string> = {
+  "4:5": "1024x1280",
+  "1:1": "1024x1024",
+  "9:16": "720x1280",
+};
+
+export async function runGptImagePhotoshoot(input: PhotoshootInput): Promise<string> {
+  const scene = input.scenePrompt || "clean studio background";
+  const style = input.finalPrompt || "professional fashion photography, sharp details, 4K";
+  const prompt = `The person from @image1 wearing the outfit from @image2, ${scene}, ${style}`;
+  const imageSize = GPT_IMAGE_SIZES[input.aspectRatio] || "1024x1280";
+
+  console.log(`[GPT-Image] GPT Image 1.5 Edit — size=${imageSize}, prompt: "${prompt.slice(0, 120)}..."`);
+
+  const result = await runWithRetry(() =>
+    fal.subscribe("fal-ai/gpt-image-1.5/edit", {
+      input: {
+        image_urls: [input.modelImage, input.garmentImage],
+        prompt,
+        image_size: imageSize,
+        ...(input.seed != null ? { seed: input.seed } : {}),
+      },
+    })
+  );
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const r = result as any;
+  const url = r?.data?.images?.[0]?.url ?? r?.images?.[0]?.url ?? r?.data?.image?.url ?? r?.image?.url;
+  if (!url) {
+    console.error("[GPT-Image] Unexpected response:", JSON.stringify(r).slice(0, 500));
+    throw new Error("GPT Image 1.5 returned no image URL");
+  }
+  console.log("[GPT-Image] Done");
+  return url;
+}
+
 // --- Hybrid enhance: FASHN result → FLUX.2 Pro Edit for photorealistic scene ---
 
 export interface HybridEnhanceInput {
