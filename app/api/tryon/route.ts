@@ -10,6 +10,7 @@ import {
   runGrokPhotoshoot,
   runGeminiPhotoshoot,
   runGptImagePhotoshoot,
+  fixFaceWithGemini,
   runHybridEnhance,
   removeBackground,
   replaceBackground,
@@ -259,6 +260,112 @@ export async function POST(req: NextRequest) {
       });
 
       console.log(`[GPT-Image] Done: ${savedUrl}`);
+      return NextResponse.json({ resultUrl: savedUrl });
+    }
+
+    // ═══ Hybrid v2: FASHN → Grok → Gemini (face) ═══
+    if (aiModel === "hybrid-v2") {
+      const steps = settings?.steps || 30;
+      const crop = settings?.crop ?? true;
+      const prompt = settings?.prompt || "clothing item";
+      const category = settings?.category || "upper_body";
+      const fashnMode = settings?.fashnMode || "quality";
+      const garmentPhotoType = settings?.garmentPhotoType || "auto";
+      const scenePrompt = settings?.scenePrompt || "professional studio, clean background";
+      const finalPrompt = settings?.finalPrompt || "professional fashion photography, sharp details, 4K";
+
+      // Step 1: FASHN try-on for precise clothing
+      let fashnResultUrl: string;
+
+      if (category === "full_outfit") {
+        if (!garmentImageBottom) {
+          return NextResponse.json(
+            { error: "Full outfit requires two garments: top and bottom" },
+            { status: 400 },
+          );
+        }
+        const bottomFilename = path.basename(garmentImageBottom);
+        const bottomBuffer = await readFile(path.join(UPLOADS_DIR, bottomFilename));
+        const bottomDataUri = `data:image/jpeg;base64,${bottomBuffer.toString("base64")}`;
+
+        console.log("[Hybrid-v2] Step 1a: FASHN upper body");
+        const upperUrl = await runTryOn("fashn-v1.6", {
+          humanImage: modelDataUri,
+          garmentImage: garmentDataUri,
+          category: "upper_body",
+          prompt, steps, seed, crop, fashnMode, garmentPhotoType, guidanceScale: 2.5,
+        });
+        const intermediateDataUri = await fetchAsDataUri(upperUrl);
+
+        console.log("[Hybrid-v2] Step 1b: FASHN lower body");
+        fashnResultUrl = await runTryOn("fashn-v1.6", {
+          humanImage: intermediateDataUri,
+          garmentImage: bottomDataUri,
+          category: "lower_body",
+          prompt, steps, seed, crop: false, fashnMode, garmentPhotoType, guidanceScale: 2.5,
+        });
+      } else {
+        console.log(`[Hybrid-v2] Step 1: FASHN try-on (${category})`);
+        fashnResultUrl = await runTryOn("fashn-v1.6", {
+          humanImage: modelDataUri,
+          garmentImage: garmentDataUri,
+          category, prompt, steps, seed, crop, fashnMode, garmentPhotoType, guidanceScale: 2.5,
+        });
+      }
+
+      // Step 2: Grok scene enhancement (fast, $0.02)
+      console.log("[Hybrid-v2] Step 2: Grok scene enhancement");
+      const fashnDataUri = await fetchAsDataUri(fashnResultUrl);
+      let resultUrl = await runGrokPhotoshoot({
+        modelImage: fashnDataUri,
+        garmentImage: garmentDataUri,
+        scenePrompt,
+        finalPrompt,
+        aspectRatio,
+        seed,
+      });
+
+      // Step 3: Gemini face fix (if face reference provided)
+      if (settings?.faceSwap === true && settings?.faceImagePath) {
+        try {
+          const faceFilename = path.basename(settings.faceImagePath);
+          const faceBuffer = await readFile(path.join(UPLOADS_DIR, faceFilename));
+          const faceDataUri = `data:image/jpeg;base64,${faceBuffer.toString("base64")}`;
+          const resultDataUri = await fetchAsDataUri(resultUrl);
+          resultUrl = await fixFaceWithGemini(resultDataUri, faceDataUri);
+          console.log("[Hybrid-v2] Step 3: Gemini face fix applied");
+        } catch (e) {
+          console.error("[Hybrid-v2] Face fix failed, keeping original:", e);
+        }
+      }
+
+      // Step 4: Optional upscale
+      if (settings?.hdUpscale !== false) {
+        const upscaleDataUri = await fetchAsDataUri(resultUrl);
+        resultUrl = await upscaleImage(upscaleDataUri);
+      }
+
+      // Step 5: Download, crop, save
+      const response = await fetch(resultUrl);
+      let resultBuffer: Buffer = Buffer.from(await response.arrayBuffer());
+
+      const { cropToAspectRatio } = await import("@/lib/image-utils");
+      resultBuffer = await cropToAspectRatio(resultBuffer, aspectRatio) as Buffer;
+      console.log(`[Hybrid-v2] Cropped to ${aspectRatio}`);
+
+      const resultFilename = `result_${Date.now()}.png`;
+      await writeFile(path.join(RESULTS_DIR, resultFilename), resultBuffer);
+      const savedUrl = `/api/files/${resultFilename}`;
+
+      await db.insert(generations).values({
+        modelImagePath: modelImage,
+        garmentImagePath: garmentImage,
+        settings: JSON.stringify(settings || {}),
+        resultImagePath: savedUrl,
+        templateId: body.templateId || null,
+      });
+
+      console.log(`[Hybrid-v2] Done: ${savedUrl}`);
       return NextResponse.json({ resultUrl: savedUrl });
     }
 

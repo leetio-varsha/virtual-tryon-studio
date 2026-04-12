@@ -45,7 +45,8 @@ export default function Settings({ settings, onChange }: SettingsProps) {
           </label>
           <div className="grid grid-cols-2 gap-2">
             {([
-              { value: "hybrid-fashn-flux" as AiModel, label: "Гибрид", desc: "FASHN + FLUX.2" },
+              { value: "hybrid-v2" as AiModel, label: "Гибрид v2", desc: "FASHN → Grok → Gemini" },
+              { value: "hybrid-fashn-flux" as AiModel, label: "Гибрид v1", desc: "FASHN + FLUX.2" },
               { value: "grok-photoshoot" as AiModel, label: "Grok", desc: "6с · $0.02" },
               { value: "gemini-photoshoot" as AiModel, label: "Gemini 3", desc: "Лица по референсу" },
               { value: "gpt-image-photoshoot" as AiModel, label: "GPT Image", desc: "65с · $0.26 · макс" },
@@ -71,8 +72,10 @@ export default function Settings({ settings, onChange }: SettingsProps) {
             ))}
           </div>
           <p className="text-xs text-muted mt-1">
-            {settings.aiModel === "hybrid-fashn-flux"
-              ? "Гибрид — FASHN точно копирует одежду (швы, логотипы, текстура), затем FLUX.2 создаёт реалистичную сцену. Лучшее качество, но дольше."
+            {settings.aiModel === "hybrid-v2"
+              ? "Гибрид v2 — FASHN (точная одежда) → Grok (сцена за 6с) → Gemini (лицо по референсу). Лучший баланс качества, скорости и цены."
+              : settings.aiModel === "hybrid-fashn-flux"
+              ? "Гибрид v1 — FASHN точно копирует одежду, затем FLUX.2 создаёт реалистичную сцену."
               : settings.aiModel === "grok-photoshoot"
               ? "Grok Imagine — xAI, 6 секунд, $0.02. Фотореалистичные сцены, хорошо сохраняет одежду."
               : settings.aiModel === "gemini-photoshoot"
@@ -97,7 +100,7 @@ export default function Settings({ settings, onChange }: SettingsProps) {
             className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent"
           />
           <p className="text-xs text-muted mt-1">
-            {settings.aiModel === "flux-photoshoot" || settings.aiModel === "grok-photoshoot" || settings.aiModel === "gemini-photoshoot" || settings.aiModel === "gpt-image-photoshoot" || settings.aiModel === "hybrid-fashn-flux"
+            {settings.aiModel === "flux-photoshoot" || settings.aiModel === "grok-photoshoot" || settings.aiModel === "gemini-photoshoot" || settings.aiModel === "gpt-image-photoshoot" || settings.aiModel === "hybrid-fashn-flux" || settings.aiModel === "hybrid-v2"
               ? "Обязательно. Опишите где происходит съёмка: кафе в Париже, фитнес-зал, улица Дубая..."
               : "Опишите желаемый фон на английском. Оставьте пустым — фон останется оригинальный."}
           </p>
@@ -251,7 +254,7 @@ export default function Settings({ settings, onChange }: SettingsProps) {
           )}
 
           {/* ── FASHN-specific settings (also used by hybrid) ── */}
-          {(settings.aiModel === "fashn-v1.6" || settings.aiModel === "hybrid-fashn-flux") && (
+          {(settings.aiModel === "fashn-v1.6" || settings.aiModel === "hybrid-fashn-flux" || settings.aiModel === "hybrid-v2") && (
             <>
               <div>
                 <label className="block text-xs text-muted mb-1.5 font-medium">Режим генерации</label>

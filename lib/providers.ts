@@ -226,6 +226,41 @@ export async function runGeminiPhotoshoot(input: PhotoshootInput): Promise<strin
   return url;
 }
 
+// --- Gemini 3 Pro — Face fix from reference ---
+
+export async function fixFaceWithGemini(
+  sceneImage: string,
+  faceReference: string,
+): Promise<string> {
+  const prompt = [
+    "Replace the face in @image1 with the exact face from @image2.",
+    "Keep the same pose, expression angle, lighting, and skin tone.",
+    "Preserve everything else — hair, clothing, background, body — unchanged.",
+    "Photorealistic, seamless blend, no artifacts.",
+  ].join(" ");
+
+  console.log("[Gemini-Face] Fixing face with Gemini 3 Pro...");
+
+  const result = await runWithRetry(() =>
+    fal.subscribe("fal-ai/gemini-3-pro-image-preview/edit", {
+      input: {
+        image_urls: [sceneImage, faceReference],
+        prompt,
+      },
+    })
+  );
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const r = result as any;
+  const url = r?.data?.images?.[0]?.url ?? r?.images?.[0]?.url ?? r?.data?.image?.url ?? r?.image?.url;
+  if (!url) {
+    console.error("[Gemini-Face] Unexpected response:", JSON.stringify(r).slice(0, 500));
+    throw new Error("Gemini 3 Pro face fix returned no image URL");
+  }
+  console.log("[Gemini-Face] Done");
+  return url;
+}
+
 // --- GPT Image 1.5 (OpenAI via fal.ai) — Max quality photoshoot ---
 
 const GPT_IMAGE_SIZES: Record<string, string> = {
