@@ -431,11 +431,22 @@ export async function replaceBackground(
   return output as unknown as string;
 }
 
+export type InpaintModel = "flux-fill-pro" | "flux-edit" | "grok" | "gemini" | "gpt-image";
+
+const INPAINT_ENDPOINTS: Record<string, string> = {
+  "flux-edit": "fal-ai/flux-2-pro/edit",
+  grok: "xai/grok-imagine-image/edit",
+  gemini: "fal-ai/gemini-3-pro-image-preview/edit",
+  "gpt-image": "fal-ai/gpt-image-1.5/edit",
+};
+
 export async function inpaintWithReference(
   imageDataUri: string,
   referenceDataUri: string,
   prompt: string,
+  model: InpaintModel = "flux-edit",
 ): Promise<string> {
+  const endpoint = INPAINT_ENDPOINTS[model] || INPAINT_ENDPOINTS["flux-edit"];
   const fullPrompt = [
     `The image from @image1 but fix the highlighted area to exactly match`,
     `the clothing details, seams, textures, and colors from @image2.`,
@@ -443,9 +454,9 @@ export async function inpaintWithReference(
     "preserve everything else unchanged, high quality, sharp detail",
   ].join(" ");
 
-  console.log(`[Inpaint+Ref] FLUX.2 Pro Edit — "${fullPrompt.slice(0, 120)}..."`);
+  console.log(`[Inpaint+Ref] ${model} (${endpoint}) — "${fullPrompt.slice(0, 120)}..."`);
   const result = await runWithRetry(() =>
-    fal.subscribe("fal-ai/flux-2-pro/edit", {
+    fal.subscribe(endpoint, {
       input: {
         image_urls: [imageDataUri, referenceDataUri],
         prompt: fullPrompt,
@@ -456,10 +467,10 @@ export async function inpaintWithReference(
   const r = result as any;
   const url = r?.data?.images?.[0]?.url ?? r?.images?.[0]?.url ?? r?.data?.image?.url ?? r?.image?.url;
   if (!url) {
-    console.error("[Inpaint+Ref] Unexpected response:", JSON.stringify(r).slice(0, 500));
-    throw new Error("FLUX.2 Pro Edit (inpaint ref) returned no image URL");
+    console.error(`[Inpaint+Ref] ${model} unexpected response:`, JSON.stringify(r).slice(0, 500));
+    throw new Error(`${model} inpaint returned no image URL`);
   }
-  console.log("[Inpaint+Ref] Done");
+  console.log(`[Inpaint+Ref] ${model} done`);
   return url;
 }
 

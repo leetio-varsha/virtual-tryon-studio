@@ -28,6 +28,7 @@ export default function InpaintEditor({ open, imageUrl, onClose, onApplied }: In
   const [drawing, setDrawing] = useState(false);
   const currentStrokeRef = useRef<Stroke | null>(null);
   const [prompt, setPrompt] = useState("");
+  const [inpaintModel, setInpaintModel] = useState<"flux-fill-pro" | "flux-edit" | "grok" | "gemini" | "gpt-image">("flux-fill-pro");
   const [referenceDataUri, setReferenceDataUri] = useState<string | null>(null);
   const refInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
@@ -38,6 +39,7 @@ export default function InpaintEditor({ open, imageUrl, onClose, onApplied }: In
     setStrokes([]);
     setRedoStack([]);
     setPrompt("");
+    setInpaintModel("flux-fill-pro");
     setReferenceDataUri(null);
     setError(null);
   }, [open, imageUrl]);
@@ -217,6 +219,7 @@ export default function InpaintEditor({ open, imageUrl, onClose, onApplied }: In
           imagePath: imageUrl,
           maskDataUri: mask,
           prompt: prompt.trim(),
+          inpaintModel,
           ...(referenceDataUri ? { referenceDataUri } : {}),
         }),
       });
@@ -310,6 +313,38 @@ export default function InpaintEditor({ open, imageUrl, onClose, onApplied }: In
                 Очистить
               </button>
             </div>
+          </div>
+
+          {/* Model selector */}
+          <div>
+            <label className="block text-xs text-muted mb-1">Модель инпейнта</label>
+            <div className="flex gap-1.5 flex-wrap">
+              {([
+                { value: "flux-fill-pro" as const, label: "FLUX Fill", desc: "маска" },
+                { value: "flux-edit" as const, label: "FLUX Edit", desc: "референс" },
+                { value: "grok" as const, label: "Grok", desc: "быстрый" },
+                { value: "gemini" as const, label: "Gemini", desc: "лица" },
+                { value: "gpt-image" as const, label: "GPT Image", desc: "макс" },
+              ]).map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setInpaintModel(opt.value)}
+                  disabled={loading}
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+                    inpaintModel === opt.value
+                      ? "bg-accent text-white border-accent"
+                      : "bg-background border-border hover:border-accent/50"
+                  } disabled:opacity-50`}
+                >
+                  {opt.label} <span className="opacity-60">{opt.desc}</span>
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-muted mt-1">
+              {inpaintModel === "flux-fill-pro"
+                ? "FLUX Fill Pro — точный инпейнт по маске. Работает без референса."
+                : "Редактирование по референсу — загрузи фото одежды/детали, AI скопирует в замаскированную область."}
+            </p>
           </div>
 
           {/* Prompt + Reference */}

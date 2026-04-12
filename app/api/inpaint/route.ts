@@ -4,6 +4,7 @@ import path from "node:path";
 import { db, RESULTS_DIR, UPLOADS_DIR } from "@/lib/db";
 import { generations } from "@/lib/db/schema";
 import { inpaintRegion, inpaintWithReference } from "@/lib/providers";
+import type { InpaintModel } from "@/lib/providers";
 
 async function readImageFromStorage(filename: string): Promise<Buffer> {
   const safeName = path.basename(filename);
@@ -19,11 +20,12 @@ async function readImageFromStorage(filename: string): Promise<Buffer> {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { imagePath, maskDataUri, prompt, referenceDataUri } = body as {
+  const { imagePath, maskDataUri, prompt, referenceDataUri, inpaintModel } = body as {
     imagePath?: string;
     maskDataUri?: string;
     prompt?: string;
     referenceDataUri?: string;
+    inpaintModel?: InpaintModel;
   };
 
   if (!imagePath || !maskDataUri || !prompt?.trim()) {
@@ -43,7 +45,7 @@ export async function POST(req: NextRequest) {
     if (referenceDataUri) {
       // Reference-guided: FLUX.2 Pro Edit (sees original + reference), then composite with mask
       console.log("[Inpaint] Using reference-guided mode");
-      const editedUrl = await inpaintWithReference(imageDataUri, referenceDataUri, prompt);
+      const editedUrl = await inpaintWithReference(imageDataUri, referenceDataUri, prompt, inpaintModel || "flux-edit");
 
       // Composite: only take the masked region from FLUX.2 result, keep rest from original
       const editedRes = await fetch(editedUrl);
@@ -80,7 +82,7 @@ export async function POST(req: NextRequest) {
     await db.insert(generations).values({
       modelImagePath: imagePath,
       garmentImagePath: imagePath,
-      settings: JSON.stringify({ inpaint: true, prompt, hasReference: !!referenceDataUri }),
+      settings: JSON.stringify({ inpaint: true, prompt, hasReference: !!referenceDataUri, inpaintModel: inpaintModel || "flux-fill-pro" }),
       resultImagePath: savedUrl,
       templateId: null,
     });
