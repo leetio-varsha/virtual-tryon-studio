@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Stim Try-On",
-  description: "Virtual clothing try-on for Instagram store",
+  title: "Virtual Try-On Studio",
+  description: "AI virtual try-on and photoshoot studio for clothing catalogs",
 };
 
 export default function RootLayout({
