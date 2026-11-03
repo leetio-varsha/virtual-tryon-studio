@@ -5,7 +5,7 @@ import path from "node:path";
 import fs from "node:fs";
 
 const DATA_DIR = path.join(process.cwd(), "data");
-const DB_PATH = path.join(DATA_DIR, "stim.db");
+const DB_PATH = path.join(DATA_DIR, "tryon.db");
 const UPLOADS_DIR = path.join(DATA_DIR, "uploads");
 const RESULTS_DIR = path.join(DATA_DIR, "results");
 

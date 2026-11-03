@@ -11,7 +11,7 @@ export default function LoginPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Set cookie and redirect
-    document.cookie = `stim-auth=${password}; path=/; max-age=${60 * 60 * 24 * 30}`; // 30 days
+    document.cookie = `tryon-auth=${password}; path=/; max-age=${60 * 60 * 24 * 30}`; // 30 days
     router.push("/");
     router.refresh();
   };
@@ -19,7 +19,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center">
       <form onSubmit={handleSubmit} className="w-full max-w-xs space-y-4">
-        <h1 className="text-xl font-semibold text-center">Stim Try-On</h1>
+        <h1 className="text-xl font-semibold text-center">Virtual Try-On Studio</h1>
         <input
           type="password"
           value={password}

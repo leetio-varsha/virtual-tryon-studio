@@ -1,14 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const AUTH_PASSWORD = process.env.APP_PASSWORD || "stimstix2024";
+const AUTH_COOKIE = "tryon-auth";
+const AUTH_PASSWORD = process.env.APP_PASSWORD;
+
+if (!AUTH_PASSWORD) {
+  console.warn("[auth] APP_PASSWORD is not set — password gate is disabled, the app is open to anyone who can reach it");
+}
 
 export function middleware(req: NextRequest) {
+  // No password configured: skip the gate entirely (see warning above)
+  if (!AUTH_PASSWORD) {
+    return NextResponse.next();
+  }
+
   // Skip auth for API file serving (images need to load in authenticated pages)
   if (req.nextUrl.pathname.startsWith("/api/files/")) {
     return NextResponse.next();
   }
 
-  const authCookie = req.cookies.get("stim-auth")?.value;
+  const authCookie = req.cookies.get(AUTH_COOKIE)?.value;
   if (authCookie === AUTH_PASSWORD) {
     return NextResponse.next();
   }
